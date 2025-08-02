@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 
+//COMPILA
 int main() {
     std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "main"};
 
