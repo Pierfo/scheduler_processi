@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include "shared_memory_object.h"
 #include "pause.h"
+#include "matrix.h"
 
 int main(int argc, char * argv[]) {
     int shared_memory_fd = shm_open("buffer", O_RDWR, 0600);
@@ -18,7 +19,6 @@ int main(int argc, char * argv[]) {
     }
     
     while(true) {
-        pause_h::sleep(0, 750000000);
-        int value = shared_buff->extract();
+        auto value = shared_buff->extract();
     }
 }

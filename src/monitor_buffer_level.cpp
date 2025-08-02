@@ -19,28 +19,22 @@ int main(int argc, char* argv[]) {
         perror("");
     }
 
-    std::string message {"The buffer is             %full"};
-    write(1, message.c_str(), message.size());
+    write(1, "The buffer is ", 14);
+    std::string end_part {};
     
     while(true) {
         double percentage = (shared_buff->calculate_fill_percentage() * 100);
         
-        for(char c : message) {
+        for(char c : end_part) {
             write(1, "\b", 1);
             write(1, " ", 1);
             write(1, "\b", 1);
         }
         
-        while(message.back() != 's') {
-            message.pop_back();
-        }
-        
         std::stringstream end {};
-        end << " " << percentage << "% full";
-        std::string end_part = end.str();
+        end << percentage << "% full";
+        end_part = end.str();
         
-        message += end_part;
-
-        write(1, message.c_str(), message.size());
+        write(1, end_part.c_str(), end_part.size());
     }
 }

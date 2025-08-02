@@ -3,18 +3,18 @@
 #include <pthread.h>
 #include <sys/types.h>
 
-template<int N>
+template<typename T, int N>
 class buffer {
     public:
     buffer();
-    void insert(int elem);
-    int extract();
+    void insert(T elem);
+    T extract();
     double calculate_fill_percentage();
     ~buffer();
     
     private:
     int start, end; //[start, end)
-    int buf[N];
+    T buf[N];
     bool change_happened;
     pthread_mutexattr_t monitor_attr;
     pthread_mutex_t monitor_access;

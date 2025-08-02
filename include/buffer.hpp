@@ -4,8 +4,8 @@
 #include <iostream>
 #include <errno.h>
 
-template<int N>
-buffer<N>::buffer()
+template<typename T, int N>
+buffer<T, N>::buffer()
     : start{0}, end{0}, change_happened{true} {
     pthread_mutexattr_init(&monitor_attr);
     pthread_mutexattr_setpshared(&monitor_attr, PTHREAD_PROCESS_SHARED);
@@ -19,8 +19,8 @@ buffer<N>::buffer()
     pthread_cond_init(&no_change_happened, &cond_attr);
 }
 
-template<int N>
-void buffer<N>::insert(int elem) {
+template<typename T, int N>
+void buffer<T, N>::insert(T elem) {
     pthread_mutex_lock(&monitor_access);
 
     while(start == increment(end)) {
@@ -42,15 +42,15 @@ void buffer<N>::insert(int elem) {
     pthread_mutex_unlock(&monitor_access);
 }
 
-template<int N>
-int buffer<N>::extract() {
+template<typename T, int N>
+T buffer<T, N>::extract() {
     pthread_mutex_lock(&monitor_access);
 
     while(start == end) {
         pthread_cond_wait(&buffer_empty, &monitor_access);
     }
 
-    int elem = buf[start];
+    T elem = buf[start];
     start = increment(start);
     
     if(!change_happened) {
@@ -66,8 +66,8 @@ int buffer<N>::extract() {
     return elem;
 }
 
-template<int N>
-double buffer<N>::calculate_fill_percentage() {
+template<typename T, int N>
+double buffer<T, N>::calculate_fill_percentage() {
     pthread_mutex_lock(&monitor_access);
     
     while(!change_happened) {
@@ -89,8 +89,8 @@ double buffer<N>::calculate_fill_percentage() {
     return nof_elements_double / (N - 1);
 }
 
-template<int N>
-buffer<N>::~buffer() {
+template<typename T, int N>
+buffer<T, N>::~buffer() {
     pthread_mutex_destroy(&monitor_access);
     pthread_mutexattr_destroy(&monitor_attr);
 

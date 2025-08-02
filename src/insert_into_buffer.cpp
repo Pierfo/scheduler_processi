@@ -4,12 +4,21 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <iostream>
 #include <unistd.h>
 #include "shared_memory_object.h"
 #include "pause.h"
+#include "matrix.h"
+#include <cstdlib>
 
 int main(int argc, char * argv[]) {
-    int value = 1;
+    matrix<10> mat;
+
+    for(int i = 0; i < 10; i++) {
+        for(int j = 0; j < 10; j++) {
+            mat.at(i, j) = rand() % 1001;
+        }
+    }
     
     int shared_memory_fd = shm_open("buffer", O_RDWR, 0600);
     ftruncate(shared_memory_fd, sizeof(shared_memory_object));
@@ -21,6 +30,6 @@ int main(int argc, char * argv[]) {
     
     while(true) {
         //pause_h::sleep(0, 500000000);
-        shared_buff->insert(value);
+        shared_buff->insert(mat);
     }
 }
