@@ -14,6 +14,7 @@
 #include "shared_memory_object.h"
 #include "pause.h"
 #include "matrix.h"
+#include <sstream>
 
 int main(int argc, char * argv[], char * env[]) {   
     if(argc != 3) {
@@ -67,10 +68,28 @@ int main(int argc, char * argv[], char * env[]) {
         pids.push_back(pid);
     }
 
+    char** args = (char**)malloc(3*sizeof(char*));
+    
+    for(int i = 0; i < pids.size(); i++) {
+        std::stringstream s {};
+        s << pids[i];
+        std::string arg {s.str()};
+        args[i] = (char*)malloc(arg.size() + 1);
+
+        for(int j = 0; j < arg.size(); j++) {
+            args[i][j] = arg[j];
+        }        
+
+        args[i][arg.size()] = 0;
+    }
+
+    args[2] = NULL;
+
     pid = fork();
 
     if(pid == 0) {
-        execve("../build_monitor_buffer_level/monitor_buffer_level", argv, env);
+
+        execve("../build_monitor_buffer_level/monitor_buffer_level", args, env);
 
         if(errno) {
             perror("");
@@ -86,6 +105,12 @@ int main(int argc, char * argv[], char * env[]) {
     for(pid_t p : pids) {
         kill(p, SIGKILL);
     }
+
+    for(int i = 0; i < 3; i++) {
+        free(args[i]);
+    }
+
+    free(args);
 
     shm_unlink("buffer");
 

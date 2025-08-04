@@ -20,5 +20,7 @@ int main(int argc, char * argv[]) {
     
     while(true) {
         auto value = shared_buff->extract();
+
+        value.invert().determinant();
     }
 }

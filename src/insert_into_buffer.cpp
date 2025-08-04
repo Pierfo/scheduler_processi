@@ -11,15 +11,10 @@
 #include "matrix.h"
 #include <cstdlib>
 
-int main(int argc, char * argv[]) {
-    matrix<10> mat;
+#define SIZE 6
 
-    for(int i = 0; i < 10; i++) {
-        for(int j = 0; j < 10; j++) {
-            mat.at(i, j) = rand() % 1001;
-        }
-    }
-    
+int main(int argc, char * argv[]) {
+        
     int shared_memory_fd = shm_open("buffer", O_RDWR, 0600);
     ftruncate(shared_memory_fd, sizeof(shared_memory_object));
     shared_memory_object * shared_memory = (shared_memory_object*)mmap(NULL, sizeof(shared_memory_object), PROT_READ | PROT_WRITE, MAP_SHARED, shared_memory_fd, 0);
@@ -29,7 +24,14 @@ int main(int argc, char * argv[]) {
     }
     
     while(true) {
-        //pause_h::sleep(0, 500000000);
-        shared_buff->insert(mat);
+        matrix<SIZE> mat;
+
+        for(int i = 0; i < SIZE; i++) {
+            for(int j = 0; j < SIZE; j++) {
+                mat.at(i, j) = rand() % 1001;
+            }
+        }
+
+        shared_buff->insert(mat.invert());
     }
 }

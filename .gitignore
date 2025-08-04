@@ -3,3 +3,5 @@ build_remove_from_buffer/
 build_monitor_buffer_level/
 build_main/
 compile_all
+log.txt
+CMakeLists.txt

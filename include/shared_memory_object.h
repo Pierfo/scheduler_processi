@@ -8,7 +8,7 @@
 */
 
 struct shared_memory_object {
-    buffer<matrix<10>, 10000> shared_buffer;
+    buffer<matrix<6>, 1001> shared_buffer;
 };
 
 #endif
