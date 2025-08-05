@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include "buffer.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -10,7 +9,6 @@
 #include <sched.h>
 #include <math.h>
 #include <sys/resource.h>
-#include <fstream>
 #include "shared_memory_object.h"
 #include "pause.h"
 
@@ -44,16 +42,6 @@ void decrement_priority(pid_t p) {
     return;
 }
 
-void log(std::fstream& logfile, double perc, pid_t a, pid_t b) {
-    struct sched_param a_sched_param;
-    struct sched_param b_sched_param;
-
-    sched_getparam(a, &a_sched_param);
-    sched_getparam(b, &b_sched_param);
-
-    logfile << "buffer: " << perc << "%, insert: " << a_sched_param.sched_priority << ", remove: " << b_sched_param.sched_priority << std::endl;
-}
-
 int main(int argc, char* argv[]) {
     pid_t insert_proc = (pid_t)std::stoi(std::string{argv[1]});
     pid_t remove_proc = (pid_t)std::stoi(std::string{argv[0]});
@@ -78,8 +66,6 @@ int main(int argc, char* argv[]) {
     write(1, "Buffer level: ", 14);
     std::string end_part {};
 
-    std::fstream logfile {"../log.txt"};
-    
     while(true) {
         double percentage = (shared_buff->calculate_fill_percentage() * 100);
 
@@ -109,7 +95,5 @@ int main(int argc, char* argv[]) {
         end_part = end.str();
         
         write(1, end_part.c_str(), end_part.size());
-
-        log(logfile, percentage, insert_proc, remove_proc);
     }
 }

@@ -1,4 +1,3 @@
-#include "buffer.h"
 #include <iostream>
 #include <unistd.h>
 #include <errno.h>
@@ -13,7 +12,6 @@
 #include <string>
 #include "shared_memory_object.h"
 #include "pause.h"
-#include "matrix.h"
 #include <sstream>
 
 int main(int argc, char * argv[], char * env[]) {   

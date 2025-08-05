@@ -1,5 +1,4 @@
 #include <iostream>
-#include "buffer.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -8,7 +7,6 @@
 #include <unistd.h>
 #include "shared_memory_object.h"
 #include "pause.h"
-#include "matrix.h"
 #include <cstdlib>
 
 #define SIZE 6
@@ -24,14 +22,8 @@ int main(int argc, char * argv[]) {
     }
     
     while(true) {
-        matrix<SIZE> mat;
+        auto obj = shared_memory->action_before_insertion();
 
-        for(int i = 0; i < SIZE; i++) {
-            for(int j = 0; j < SIZE; j++) {
-                mat.at(i, j) = rand() % 1001;
-            }
-        }
-
-        shared_buff->insert(mat.invert());
+        shared_buff->insert(obj);
     }
 }
