@@ -13,12 +13,26 @@
 #include "shared_memory_object.h"
 #include "pause.h"
 #include <sstream>
+#include <sched.h>
 
 int main(int argc, char * argv[], char * env[]) {   
     if(argc != 3) {
         std::cout << "Sintassi corretta: \"./main sec msec\"" << std::endl;
         return 0;
     }
+
+    struct sched_param par;
+    sched_getparam(0, &par);
+
+    par.sched_priority = sched_get_priority_min(SCHED_FIFO);
+    sched_setscheduler(0, SCHED_FIFO, &par);
+
+    if(errno == EPERM) {
+        std::cout << "Questo programma richiede di essere eseguito in modalità sudo" << std::endl;
+        return 0;
+    }
+
+    pause_h::sleep(0, 500000000);
 
     std::string seconds_string {argv[1]};
     std::string microseconds_string {argv[2]};
@@ -97,6 +111,9 @@ int main(int argc, char * argv[], char * env[]) {
     else {
         pids.push_back(pid);
     }
+
+    par.sched_priority = sched_get_priority_min(SCHED_FIFO);
+    sched_setscheduler(0, SCHED_FIFO, &par);
 
     pause_h::sleep(seconds, microseconds);
 

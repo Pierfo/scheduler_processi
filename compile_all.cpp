@@ -23,7 +23,7 @@ int main() {
         script << "#!/bin/bash" << std::endl;
         script << "cmake -S . -B build_" << name <<std::endl;
         script << "cd build_" << name << std::endl;
-        script << "make" << std::endl;
+        script << "make -j2" << std::endl;
         script << "cd ..";
 
         script.close();

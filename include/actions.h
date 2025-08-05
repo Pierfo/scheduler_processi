@@ -2,6 +2,7 @@
 #define ACTIONS_H
 
 #include "matrix.h"
+#include <iostream>
 
 template<int N>
 class matrix_action_before_insertion {
