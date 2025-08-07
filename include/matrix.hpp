@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include <string>
 #include <sstream>
-#include <vector>
 
+//Costruttore di default, costruisce una matrice con tutti i termini nulli
 template<int N>
 matrix<N>::matrix() {
     for(int i = 0; i < N; i++) {
@@ -16,6 +16,7 @@ matrix<N>::matrix() {
     }
 }
 
+//Costruisce la matrice a partire da un array bidimensionale
 template<int N>
 matrix<N>::matrix(const double m[N][N]) {
     for(int i = 0; i < N; i++) {
@@ -25,6 +26,7 @@ matrix<N>::matrix(const double m[N][N]) {
     }
 }
 
+//Costruttore di copia
 template<int N>
 matrix<N>::matrix(const matrix<N>& m) {
     for(int i = 0; i < N; i++) {
@@ -34,6 +36,7 @@ matrix<N>::matrix(const matrix<N>& m) {
     }
 }
 
+//Overriding dell'assegnamento di copia
 template<int N>
 matrix<N>& matrix<N>::operator=(const matrix<N>& m) {
     for(int i = 0; i < N; i++) {
@@ -45,8 +48,10 @@ matrix<N>& matrix<N>::operator=(const matrix<N>& m) {
     return *this;
 }
 
+//Calcola il determinante
 template<int N>
 double matrix<N>::determinant() const {
+    //Alloca nell'heap un array bidimensionale e vi copia il contenuto della matrice
     double** m = (double**)malloc(N*sizeof(double*));
 
     for(int i = 0; i < N; i++) {
@@ -68,16 +73,19 @@ double matrix<N>::determinant() const {
     return det;
 }
 
+
+//Determina la matrice inversa, lancia errore se la matrice non è invertibile
 template<int N>
 matrix<N> matrix<N>::invert() const {
-    matrix<N> inverse {};
-
     double det = determinant();
-
+    
     if(det == 0) {
         throw std::logic_error{"Matrice non invertibile"};
     }
 
+    matrix<N> inverse {};
+
+    //Alloca lo spazio per la costruzione della matrice ottenuta rimuovendo una riga e una colonna dalla matrice originale
     double** m_tr = (double**)malloc((N-1)*sizeof(double*));
     
     for(int i = 0; i < N-1; i++) {
@@ -86,29 +94,14 @@ matrix<N> matrix<N>::invert() const {
 
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            int row_index = 0;
-            
-            for(int a = 0; a < N; a++) {
-                int column_index = 0;
-                
-                if(a == i) continue;
-                    
-                for(int b = 0; b < N; b++) {
-                    if(b == j) continue;
-                    
-                    m_tr[row_index][column_index] = mat[a][b];
-
-                    column_index++;
-                }
-
-                    
-                row_index++;
-            }
+            //Costruisce la matrice ottenuta rimuovendo l'i-esima riga e la j-esima colonna dalla matrice originale
+            remove_row_and_column(m_tr, NULL, i, j, N);
 
             inverse.at(i, j) = ((i + j) % 2 == 0 ? 1 : -1) * calculate_determinant(m_tr, N-1) / det;
         }
     }
 
+    //Dealloca lo spazio
     for(int k = 0; k < N-1; k++) {
         free(m_tr[k]);
     }
@@ -118,45 +111,7 @@ matrix<N> matrix<N>::invert() const {
     return inverse.transpose();
 }
 
-template<int N>
-double matrix<N>::calculate_determinant(double** m, int l) const {    
-    if(l == 1) {
-        return m[0][0];
-    }
-
-    double det = 0;
-    
-    double** m_tr = (double**)malloc((l-1)*sizeof(double*));
-    
-    for(int i = 0; i < l-1; i++) {
-        m_tr[i] = (double*)malloc((l-1)*sizeof(double));
-    }
-    
-    for(int i = 0; i < l; i++) {
-        int row_index = 0;
-        
-        for(int a = 0; a < l; a++) {
-            if(a == i) continue;
-            
-            for(int j = 1; j < l; j++) {
-                m_tr[row_index][j-1] = m[a][j];
-            }
-            
-            row_index++;
-        }
-        
-        det += (i % 2 == 0 ? 1 : -1) * m[i][0] * calculate_determinant(m_tr, l-1);
-    }
-    
-    for(int i = 0; i < l-1; i++) {
-        free(m_tr[i]);
-    }
-
-    free(m_tr);
-
-    return det;
-}
-
+//Restituisce il riferimento all'elemento in posizione (i, j), lancia errore se i o j sono fuori dai confini della matrice
 template<int N>
 double& matrix<N>::at(int i, int j) {
     if(i < 0 || i >= N || j < 0 || j >= N) {
@@ -166,6 +121,7 @@ double& matrix<N>::at(int i, int j) {
     return mat[i][j];
 }
 
+//Determina la matrice trasposta
 template<int N>
 matrix<N> matrix<N>::transpose() const {
     double tr[N][N];
@@ -181,18 +137,79 @@ matrix<N> matrix<N>::transpose() const {
     return trm;
 }
 
+//Utility function per il calcolo del determinante. Calcola ricorsivamente il determinante utilizzando la formula di Laplace
+template<int N>
+double matrix<N>::calculate_determinant(double** m, int l) const {        
+    //Caso base
+    if(l == 1) {
+        return m[0][0];
+    }
+
+    double det = 0;
+    
+    //Alloca lo spazio per la costruzione della matrice ottenuta rimuovendo una riga e una colonna dalla matrice originale
+    double** m_tr = (double**)malloc((l-1)*sizeof(double*));
+    
+    for(int i = 0; i < l-1; i++) {
+        m_tr[i] = (double*)malloc((l-1)*sizeof(double));
+    }
+    
+    for(int i = 0; i < l; i++) {
+        //Costruisce la matrice ottenuta rimuovendo l'i-esima riga e la prima colonna dalla matrice originale
+        remove_row_and_column(m_tr, m, i, 0, l);
+        
+        //Applica la formula di laplace
+        det += (i % 2 == 0 ? 1 : -1) * m[i][0] * calculate_determinant(m_tr, l-1);
+    }
+    
+    //Dealloca lo spazio
+    for(int i = 0; i < l-1; i++) {
+        free(m_tr[i]);
+    }
+
+    free(m_tr);
+
+    return det;
+}
+
+//Utility function che rimuove la riga i e la colonna j dalla matrice source. m punta all'area di memoria dove si salverà
+//la matrice risultante. l è la dimensione di source
+template<int N>
+void matrix<N>::remove_row_and_column(double** m, double** source, int i, int j, int l) const {
+    int row_index = 0;
+    
+    for(int a = 0; a < l; a++) {
+        int column_index = 0;
+        
+        if(a == i) continue;
+                    
+        for(int b = 0; b < l; b++) {
+            if(b == j) continue;
+
+            m[row_index][column_index] = (source != NULL ? source[a][b] : mat[a][b]);
+            
+            column_index++;
+        }
+        
+        row_index++;
+    }
+}
+
+//Stampa la matrice
 template<int N>
 std::ostream& operator<< (std::ostream& o, matrix<N> m) {
-    std::vector<std::string> elements {};
+    std::string elements[N*N];
 
+    //Converte ciascun numero in stringa e lo salva in elements
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
             std::stringstream s {};
             s << m.at(i, j) << " ";
-            elements.push_back(s.str());
+            elements[i*N + j] = s.str();
         }
     }
 
+    //Trova il valore massimo di lunghezza e fa sì che tutte le stringhe abbiano tale lunghezza 
     int max = 0;
 
     for(std::string s : elements) {
@@ -207,14 +224,15 @@ std::ostream& operator<< (std::ostream& o, matrix<N> m) {
         }
     }
     
+    //Stampa il contenuto
     o << std::endl;
     for(int i = 0; i < N; i++) {
-        o << "|";
-        for(int j = 0; j < N - 1; j++) {
-            o << elements[i*N + j];
+        o << "| ";
+        for(int j = 0; j < N; j++) {
+            o << " " << elements[i*N + j];
         }
 
-        o << elements[(i+1)*N - 1] << "|" << std::endl;
+        o << " |" << std::endl;
     }
 
     return o;

@@ -4,7 +4,7 @@
 #include <string>
 #include <fstream>
 
-//COMPILA
+//Compila il programma. Il file eseguibile si troverà nella directory "build_main"
 int main() {
     std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "main"};
 
@@ -13,6 +13,7 @@ int main() {
 
         makefile << "cmake_minimum_required(VERSION 3.6)" << std::endl << std::endl;
         makefile << "project(" << name << ")" << std::endl << std::endl;
+        makefile << "set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -O2\")" << std::endl << std::endl;
         makefile << "include_directories(include)" << std::endl << std::endl;
         makefile << "add_executable(" << name << " src/" << name << ".cpp)" << std::endl;
         

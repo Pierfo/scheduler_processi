@@ -1,29 +1,33 @@
-#include <iostream>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <string.h>
-#include <iostream>
 #include <unistd.h>
 #include "shared_memory_object.h"
-#include "pause.h"
-#include <cstdlib>
 
-#define SIZE 6
-
+/*
+    Inserisce i dati nel buffer; prima di ogni estrazione, esegue la funzione specificata nello struct 
+    shared_memory_object condiviso fra i vari processi 
+*/
 int main(int argc, char * argv[]) {
-        
+    //Apre un collegamento con la memoria condivisa dal processo main
     int shared_memory_fd = shm_open("buffer", O_RDWR, 0600);
+    //Tronca l'area di memoria rappresentata dal file descriptor shared_memory_fd in modo tale da avere dimensione pari 
+    //alla dimensione di shared_memory_object
     ftruncate(shared_memory_fd, sizeof(shared_memory_object));
+    //L'area di memoria condivisa viene mappata nel proprio spazio degli indirizzi logici
     shared_memory_object * shared_memory = (shared_memory_object*)mmap(NULL, sizeof(shared_memory_object), PROT_READ | PROT_WRITE, MAP_SHARED, shared_memory_fd, 0);
+    //Ottiene l'accesso al buffer condiviso
     auto shared_buff = &shared_memory->shared_buffer;
+
+    //Stampa eventuali messaggi di errore
     if(errno) {
         perror("");
     }
     
     while(true) {
+        //Esegue la funzione definita nello struct shared_memory_object
         auto obj = shared_memory->action_before_insertion();
 
+        //Inserisce l'elemento nel buffer
         shared_buff->insert(obj);
     }
 }

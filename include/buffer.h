@@ -1,19 +1,22 @@
 #ifndef BUFFER
 #define BUFFER
 
-//T è il tipo di dato che può essere inserito nel buffer mentre N è la sua capienza massima
+#include <pthread.h>
+
 template<typename T, int N>
 /*
-    Classe che gestisce un buffer circolare. Solo un processo per volta può accedere al buffer.
-    
+    Classe che gestisce un buffer circolare contenente oggetti di tipo T avente capienza massima pari a N-1. 
+    Solo un processo per volta può accedere al buffer.
 */
 class buffer {
     public:
-    buffer();
+    buffer(); //Inizializza un buffer vuoto
     void insert(T elem); //Inserisce un elemento alla fine del buffer
     T extract(); //Estrae un elemento dall'inizio del buffer
     double calculate_fill_percentage(); //Calcola la percentuale di riempimento del buffer
-    ~buffer();
+    bool is_full() {return start == increment(end);} //Verifica se il buffer è pieno
+    bool is_empty() {return start == end;} //Verifica se il buffer è vuoto
+    ~buffer(); //Distrugge il buffer
     
     private:
     int start; //La posizione dell'elemento che sarà restituito dalla prossima chiamata a extract()
@@ -24,8 +27,8 @@ class buffer {
     pthread_mutex_t buffer_access; //Mutex che garantisce l'accesso al buffer a solo un processo alla volta
     pthread_cond_t buffer_empty; //Variabile condition per quando il buffer è vuoto
     pthread_cond_t buffer_full; //Variabile condition per quando il buffer è pieno
-    pthread_condattr_t cond_attr; //Attributo che serve a definire le varie variabili condition
     pthread_cond_t no_change_happened; //Variabile condition per quando la percentuale di riempimento non ha subito modifiche dall'ultima sua lettura
+    pthread_condattr_t cond_attr; //Attributo che serve a definire le variabili condition
     
     int increment(int v) {return (v + 1) % N;}; //Incrementa di un'unità gli indici start o end
 };

@@ -2,13 +2,15 @@
 #define ACTIONS_H
 
 #include "matrix.h"
-#include <iostream>
 
+/*
+    Function object che definisce la funzione che dev'essere eseguita prima di inserire un elemento nel buffer
+*/
 template<int N>
 class matrix_action_before_insertion {
     public:
-    matrix_action_before_insertion() {};
-    matrix<N> operator() () {
+    matrix_action_before_insertion() {}; //Costruttore di default
+    matrix<N> operator() () { //Overriding dell'operatore ()
         matrix<N> mat;
 
         for(int i = 0; i < N; i++) {
@@ -21,11 +23,14 @@ class matrix_action_before_insertion {
     };
 };
 
+/*
+    Function object che definisce la funzione che dev'essere eseguita dopo aver estratto un elemento dal buffer
+*/
 template<int N>
 class matrix_action_after_extraction {
     public:
-    matrix_action_after_extraction() {};
-    void operator() (matrix<N> mat) {mat.invert().determinant();};
+    matrix_action_after_extraction() {}; //Costruttore di default
+    void operator() (matrix<N> mat) {mat.invert().determinant();}; //Overriding del'operatore ()
 };
 
 #endif
