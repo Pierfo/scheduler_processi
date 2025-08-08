@@ -6,7 +6,11 @@ Il programma avvia l'esecuzione di tre processi paralleli, i quali operano tutti
 ## Compilazione ed esecuzione
 
 Per compilare il programma è sufficiente compilare ed eseguire lo script `compile_all.cpp`; il file eseguibile sarà generato nella cartella `build_main`. 
-L'esecuzione del programma avviene con il comando `sudo ./main sec nsec`, dove `sec` e `nsec` indicano rispettivamente per quanti secondi e nanosecondi il programma deve eseguire (ad esempio `sudo ./main 20 500000000` indica che il programma deve eseguire per `20` secondi e `500000000` nanosecondi). Il programma dev'essere eseguito in modalità `sudo`, altrimenti non avrebbe l'autorizzazione ad alterare le priorità dei vari processi.
+L'esecuzione del programma avviene con il comando 
+```shell
+sudo ./main sec nsec
+```
+dove `sec` e `nsec` indicano rispettivamente per quanti secondi e nanosecondi il programma deve eseguire (ad esempio `sudo ./main 20 500000000` indica che il programma deve eseguire per `20` secondi e `500000000` nanosecondi). Il programma dev'essere eseguito in modalità `sudo`, altrimenti non avrebbe l'autorizzazione ad alterare le priorità dei vari processi.
 
 ## Scheduling dei processi
 
