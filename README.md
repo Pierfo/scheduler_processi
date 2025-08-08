@@ -10,11 +10,11 @@ L'esecuzione del programma avviene con il comando
 ```shell
 sudo ./main sec nsec
 ```
-dove `sec` e `nsec` indicano rispettivamente per quanti secondi e nanosecondi il programma deve eseguire (ad esempio `sudo ./main 20 500000000` indica che il programma deve eseguire per `20` secondi e `500000000` nanosecondi). Il programma dev'essere eseguito in modalità `sudo`, altrimenti non avrebbe l'autorizzazione ad alterare le priorità dei vari processi.
+dove `sec` e `nsec` indicano rispettivamente per quanti secondi e nanosecondi il programma deve eseguire (ad esempio `sudo ./main 20 500000000` indica che il programma deve eseguire per `20` secondi e `500000000` nanosecondi), entrambi i parametri devono essere due numeri positivi, inoltre `nsec` non può superare il valore 999999999. Il programma dev'essere eseguito in modalità `sudo`, in quanto richiede di avere l'autorizzazione ad alterare le priorità dei vari processi.
 
 ## Scheduling dei processi
 
-Com'è stato detto all'inizio, le priorità dei processi `insert_into_buffer` e `remove_from_buffer` sono alterate dinamicamente a seconda della percentuale di riempimento del buffer: in "condizione di equilibrio" entrambi i processi sono schedulati con politica `SCHED_OTHER` e ad ambedue è attributo un `nice value` pari a `0`; nel momento in cui la percentuale scende al di sotto del 25% si fa passare il processo `insert_into_buffer` alla politica `SCHED_RR` con priorità statica definita dalla funzione
+Com'è stato detto all'inizio, le priorità dei processi `insert_into_buffer` e `remove_from_buffer` sono alterate dinamicamente a seconda della percentuale di riempimento del buffer: in "condizione di equilibrio" entrambi i processi sono schedulati con politica `SCHED_OTHER` e ad ambedue è attributo un `nice value` pari a `0`; nel momento in cui la percentuale scende al di sotto del 25%, tuttavia, si fa passare il processo `insert_into_buffer` alla politica `SCHED_RR` con priorità statica definita dalla funzione
 ```c
 max(floor((25 - percentage) * (MAXIMUM_PRIORITY / 25.0)), prio)
 ```
@@ -29,17 +29,17 @@ Per quanto riguarda i processi `main` e `monitor_buffer_level`, a essi è attrib
 ## buffer.h
 
 Il file `include/buffer.h` definisce la classe `buffer`, la quale implementa il buffer condiviso. Tale classe è definita sotto un template in cui il primo parametro è il tipo di dato che può essere inserito mentre il secondo è la dimensione, pertanto se si vuole implementare un buffer di interi con 1000 posizioni è necessario usare la sintassi 
-```c
+```c++
 buffer<int, 1000>
 ```
-La classe `buffer` garantisce che solo un processo per volta possa accedere ai dati al suo interno, inoltre, essa è in grado di
+La classe `buffer` garantisce l'accesso ai dati a solo un processo per volta, inoltre, essa è in grado di
 - sospendere l'esecuzione di `insert_into_buffer`, nel caso in cui il buffer sia pieno
 - sospendere l'esecuzione di `remove_from_buffer`, nel caso in cui il buffer sia vuoto
 - sospendere l'esecuzione di `monitor_buffer_level`, nel caso in cui non è stata effettuato alcun inserimento/rimozione dall'ultima volta che è stata letta la percentuale
 
 ## Personalizzazione
 
-All'utente è fornita la possibilità di personalizzare alcuni aspetti del funzionamento del programma, in particolare, è possibile
+All'utente è fornita la possibilità di personalizzare alcuni aspetti del funzionamento del programma: in particolare, è possibile
 - modificare le dimensioni del buffer e/o il tipo di oggetti che può contenere
 - definire una propria funzione da eseguire per generare il prossimo elemento da inserire nel buffer
 - definire una propria funzione da eseguire dopo aver estratto un elemento dal buffer

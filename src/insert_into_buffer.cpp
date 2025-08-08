@@ -4,7 +4,7 @@
 #include "shared_memory_object.h"
 
 /*
-    Inserisce i dati nel buffer; prima di ogni estrazione, esegue la funzione specificata nello struct 
+    Inserisce i dati nel buffer; prima di ogni inserimento, esegue la funzione specificata nello struct 
     shared_memory_object condiviso fra i vari processi 
 */
 int main(int argc, char * argv[]) {
@@ -24,7 +24,7 @@ int main(int argc, char * argv[]) {
     }
     
     while(true) {
-        //Esegue la funzione definita nello struct shared_memory_object
+        //Esegue la funzione definita in shared_memory_object.action_before_insertion
         auto obj = shared_memory->action_before_insertion();
 
         //Inserisce l'elemento nel buffer

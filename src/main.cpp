@@ -15,13 +15,42 @@
     Avvia l'esecuzione dei processi di inserimento ed estrazione dei dati e di monitoraggio del livello del buffer, 
     inoltre costruisce l'area di memoria che sarà condivisa fra i tre processi figli.
     Il programma richiede che si passino due argomenti da linea di comando, i quali indicano rispettivamente per quanti
-    secondi e nanosecondi deve eseguire quest'ultimo (ed esempio "./main 2 500000000" indica che il programma deve
+    secondi e nanosecondi questo deve eseguire (ed esempio "sudo ./main 2 500000000" indica che il programma deve
     eseguire per 2 secondi e 500000000 nanosecondi).
-    Il programma deve essere eseguito in modalità sudo.
+    Il programma deve essere avviato in modalità sudo.
 */
 int main(int argc, char * argv[], char * env[]) {   
     if(argc != 3) {
-        std::cout << "Sintassi corretta: \""<< argv[0] << " sec nsec\"" << std::endl;
+        std::cout << "Sintassi corretta: \"sudo "<< argv[0] << " sec nsec\"" << std::endl;
+        return 0;
+    }
+
+    int seconds = -1;
+    int nanoseconds = -1;
+
+    try {
+        //Ottiene i secondi e nanosecondi per cui il programma dev'essere eseguito
+        seconds = std::stoi(std::string{argv[1]});
+        nanoseconds = std::stoi(std::string{argv[2]});
+    }
+
+    catch(std::invalid_argument e) {
+        std::cout << "Errore: \"" << (seconds == -1 ? argv[1] : argv[2]) << "\" non è un numero" << std::endl;
+        return 0;
+    }
+
+    catch(std::out_of_range e) {
+        std::cout << "Errore: \"" << (seconds == -1 ? argv[1] : argv[2]) << "\" è un valore troppo grande" << std::endl;
+        return 0;
+    }
+
+    if(seconds < 0 || nanoseconds < 0) {
+        std::cout << "Errore: \"" << (seconds < 0 ? seconds : nanoseconds) << "\" non è un numero positivo" << std::endl;
+        return 0;
+    }
+
+    if(nanoseconds > 999999999) {
+        std::cout << "Errore: il secondo parametro non può superare 999999999" << std::endl;
         return 0;
     }
 
@@ -41,11 +70,7 @@ int main(int argc, char * argv[], char * env[]) {
         return 0;
     }
 
-    pause_h::sleep(0, 500000000);
-
-    //Ottiene i secondi e nanosecondi per cui il programma dev'essere eseguito
-    int seconds = std::stoi(std::string{argv[1]});
-    int nanoseconds = std::stoi(std::string{argv[2]});
+    pause_h::sleep(0, 5000);
 
     //Istanzia lo struct shared_memory_object
     struct shared_memory_object shared_memory_object_instance;
@@ -141,7 +166,6 @@ int main(int argc, char * argv[], char * env[]) {
         kill(p, SIGKILL);
     }
 
-    //Dealloca memoria
     for(int i = 0; i < 3; i++) {
         free(args[i]);
     }

@@ -5,13 +5,13 @@
 #include "pause.h"
 
 /*
-    Function object che definisce la funzione che dev'essere eseguita prima di inserire un elemento nel buffer
+    Function object che definisce la funzione che dev'essere eseguita per generare un nuovo elemento da inserire nel buffer
 */
 template<int N>
 class matrix_action_before_insertion {
     public:
     matrix_action_before_insertion() {}; //Costruttore di default
-    matrix<N> operator() () /*Overriding dell'operatore (), genera una matrice e, se è invertibile, costruisce la sua inversa*/ { 
+    matrix<N> operator() () /*Overriding dell'operatore (): genera una matrice e, se è invertibile, costruisce la sua inversa*/ { 
         matrix<N> mat;
         double det = 0;
 
@@ -36,7 +36,7 @@ template<int N>
 class matrix_action_after_extraction {
     public:
     matrix_action_after_extraction() {}; //Costruttore di default
-    void operator() (matrix<N> mat) {mat.invert();}; //Overriding del'operatore (), costruisce la matrice inversa
+    void operator() (matrix<N> mat) {mat.invert();}; //Overriding del'operatore (): costruisce la matrice inversa
 };
 
 #endif

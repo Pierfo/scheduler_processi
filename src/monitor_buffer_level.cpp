@@ -7,7 +7,7 @@
 #include <sys/resource.h>
 #include "shared_memory_object.h"
 
-//Il massimo valore di priorità da attribuire al processo di inserimento
+//Il massimo valore di priorità che può essere attribuito al processo di inserimento
 #define MAXIMUM_PRIORITY 80
 
 //Aumenta la priorità del processo a, facendolo passare alla politica SCHED_RR, e diminuisce quella del processo b,
@@ -23,10 +23,11 @@ void boost_priority(pid_t a, struct sched_param& a_sched_param, pid_t b, struct 
 
     //Definisce il nice value per b
     setpriority(PRIO_PROCESS, b, (int)floor(prio * 19 / MAXIMUM_PRIORITY));
+    return;
 }
 
-//Se la priorità del processo a è maggiore del valore minimo, allora diminuisce questa di un'unità e aumenta il nice value
-//del processo b di un'unità
+//Se la priorità del processo a è maggiore del valore minimo, allora diminuisce questa di un'unità e riduce il nice value
+//del processo b
 void decrement_priority(pid_t a, struct sched_param& a_sched_param, pid_t b) {
     if(a_sched_param.sched_priority == 0) return;
     
@@ -46,8 +47,8 @@ void decrement_priority(pid_t a, struct sched_param& a_sched_param, pid_t b) {
 }
 
 /*
-    Monitora il livello di riempimento del buffer. Se questo è minore o uguale a 25% allora aumenta la priorità del
-    processo che inserisce dati nel buffer e diminuisce quella del processo di estrazione
+    Monitora il livello di riempimento del buffer: se questo è minore o uguale a 25% allora aumenta la priorità del
+    processo insert_into_buffer e diminuisce quella di remove_from_buffer, così da riportare il livello a un valore accettabile
 */
 int main(int argc, char* argv[]) {
     //Ottiene i pid dei processi che inseriscono e che estraggono i dati dal buffer, forniti come argomenti al programma
@@ -58,7 +59,7 @@ int main(int argc, char* argv[]) {
     struct sched_param monitor_sched_param;
     sched_getparam(0, &monitor_sched_param);
 
-    //Conferisce a sé stesso la priorità massima
+    //Conferisce a sé stesso la priorità massima con politica SCHED_FIFO
     monitor_sched_param.sched_priority = sched_get_priority_max(SCHED_FIFO);
     sched_setscheduler(0, SCHED_FIFO, &monitor_sched_param);
 
@@ -95,15 +96,15 @@ int main(int argc, char* argv[]) {
         double percentage = (shared_buff->calculate_fill_percentage() * 100);
 
         //Se la percentuale di riempimento è minore o uguale al 25% allora aumenta la priorità del processo di inserimento e 
-        //diminuisce la priorità del processo di rimozione.
+        //diminuisce quella del processo di rimozione.
         //La nuova priorità che viene attribuita al processo di inserimento è definita dalla funzione
         //floor((25-percentage)*(MAXIMUM_PRIORITY/25.0))
-        if(percentage <= 25) {
+        if(percentage < 25) {
             boost_priority(insert_proc, insert_sched_param, remove_proc, remove_sched_param, (int)floor((25 - percentage) * (MAXIMUM_PRIORITY / 25.0)));
         }
 
-        //Se la percentuale di riempimento è compresa fra il 26% e il 74%, decrementa la priorità di entrambi i 
-        //processi di un'unità 
+        //Se la percentuale di riempimento è maggiore o uguale al 25%, decrementa di un'unità la priorità del processo 
+        //di inserimento
         else {
             decrement_priority(insert_proc, insert_sched_param, remove_proc);
         }
@@ -120,18 +121,16 @@ int main(int argc, char* argv[]) {
             percentage_string.push_back(' ');
         }
 
-        //Converte la priorità statica del processo di inserimento in stringa
+        //Converte la priorità statica del processo di inserimento in stringa e si assicura che questa abbia lunghezza 3
         std::string insert_sched_param_string = std::to_string(insert_sched_param.sched_priority);
 
-        //Si assicura che la stringa abbia lunghezza 3
         while(insert_sched_param_string.size() < 3) {
             insert_sched_param_string.push_back(' ');
         }
 
-        //Converte in stringa l'opposto del nice value del processo di rimozione
+        //Converte l'opposto del nice value del processo di rimozione in stringa e si assicura che questa abbia lunghezza 3
         std::string remove_sched_param_string = std::to_string(-getpriority(PRIO_PROCESS, remove_proc));
 
-        //Si assicura che la stringa abbia lunghezza 3
         while(remove_sched_param_string.size() < 3) {
             remove_sched_param_string.push_back(' ');
         }

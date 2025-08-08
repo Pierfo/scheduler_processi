@@ -5,7 +5,8 @@
 
 template<typename T, int N>
 /*
-    Classe che gestisce un buffer circolare contenente oggetti di tipo T avente capienza massima pari a N-1. 
+    Classe che gestisce un buffer circolare contenente oggetti di tipo T e di dimensione pari a N; il buffer può contenere 
+    fino a un massimo di N-1 elementi. 
     Solo un processo per volta può accedere al buffer.
 */
 class buffer {
@@ -30,7 +31,7 @@ class buffer {
     pthread_cond_t no_change_happened; //Variabile condition per quando la percentuale di riempimento non ha subito modifiche dall'ultima sua lettura
     pthread_condattr_t cond_attr; //Attributo che serve a definire le variabili condition
     
-    int increment(int v) {return (v + 1) % N;}; //Incrementa di un'unità gli indici start o end
+    int increment(int v) {return (v + 1) % N;}; //Incrementa di un'unità in maniera circolare
 };
 
 #include "buffer.hpp"

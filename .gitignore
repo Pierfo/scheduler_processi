@@ -5,6 +5,7 @@ build_main/
 compile_all
 log.txt
 CMakeLists.txt
+script.sh
 include/actions2.h
 test.cpp
 test
