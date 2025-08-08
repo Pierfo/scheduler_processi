@@ -39,11 +39,14 @@ All'utente è fornita la possibilità di personalizzare alcuni aspetti del funzi
 - modificare le dimensioni del buffer e/o il tipo di oggetti che può contenere
 - definire una propria funzione da eseguire per generare il prossimo elemento da inserire nel buffer
 - definire una propria funzione da eseguire dopo aver estratto un elemento dal buffer
+
 Per definire le due funzioni è necessario construire due function object distinti in cui si effettua overriding dell'operatore `()`, si devono inoltre seguire i seguenti vincoli:
 - la funzione che genera gli elementi non deve richiedere alcun argomento e deve restituire un oggetto tale da poter essere inserito nel buffer
 - la funzione da eseguire dopo aver estratto un elemento non deve restituire alcun oggetto e deve richiedere, come argomento, un oggetto di tipo compatibile con quelli contenuti nel buffer
+
 Per applicare la propria implementazione è necessario modificare lo `struct shared_memory_object` definito in `include/shared_memory_object.h`, secondo le seguenti regole:
 - per modificare le dimensioni del buffer e/o il tipo di oggetti che può contenere basta modificare i parametri template del campo `shared_buffer`
 - per definire la funzione da eseguire per generare gli elementi basta modificare il tipo del campo `action_before_insertion`
 - per definire la funzione da eseguire dopo aver estratto un elemento basta modificare il tipo del campo `action_after_extraction`
+  
 In questa versione del programma il buffer ha dimensione `1001` e contiene istanze di `matrix<N>` (classe che implementa matrici NxN), la funzione che genera gli elementi da inserire costruisce una matrice NxN e restituisce la sua inversa, mentre la funzione da eseguire dopo un'estrazione inverte la matrice passata per argomento. I due function object sono definiti in `include/actions.h`.
