@@ -21,7 +21,7 @@
 */
 int main(int argc, char * argv[], char * env[]) {   
     if(argc != 3) {
-        std::cout << "Sintassi corretta: \""<< argv[0] << " sec msec\"" << std::endl;
+        std::cout << "Sintassi corretta: \""<< argv[0] << " sec nsec\"" << std::endl;
         return 0;
     }
 

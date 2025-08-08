@@ -7,7 +7,7 @@
 #include <sys/resource.h>
 #include "shared_memory_object.h"
 
-//Il massimo valore di priorità da attribuire ai processi di inserimento o rimozione
+//Il massimo valore di priorità da attribuire al processo di inserimento
 #define MAXIMUM_PRIORITY 80
 
 //Aumenta la priorità del processo a, facendolo passare alla politica SCHED_RR, e diminuisce quella del processo b,
@@ -25,20 +25,29 @@ void boost_priority(pid_t a, struct sched_param& a_sched_param, pid_t b, struct 
     setpriority(PRIO_PROCESS, b, (int)floor(prio * 19 / MAXIMUM_PRIORITY));
 }
 
-//Se la priorità del processo p è maggiore del valore minimo, allora diminuisce questa di un'unità
-void decrement_priority(pid_t p, struct sched_param& p_sched_param) {
-    if(p_sched_param.sched_priority <= sched_get_priority_min(SCHED_RR)) return;
+//Se la priorità del processo a è maggiore del valore minimo, allora diminuisce questa di un'unità e aumenta il nice value
+//del processo b di un'unità
+void decrement_priority(pid_t a, struct sched_param& a_sched_param, pid_t b) {
+    if(a_sched_param.sched_priority == 0) return;
     
-    p_sched_param.sched_priority--;
-    sched_setscheduler(p, SCHED_RR, &p_sched_param);
+    a_sched_param.sched_priority--;
 
+    if(a_sched_param.sched_priority == 0) {
+        sched_setscheduler(a, SCHED_OTHER, &a_sched_param);
+        setpriority(PRIO_PROCESS, a, 0);
+    }
+    
+    else {
+        sched_setparam(a, &a_sched_param);
+    }
+
+    setpriority(PRIO_PROCESS, b, a_sched_param.sched_priority * (19) / MAXIMUM_PRIORITY);
     return;
 }
 
 /*
-    Monitora il livello di riempimento del buffer. Se questo è minore o uguale a 0.25 allora aumenta la priorità del
-    processo che inserisce dati nel buffer, mentre se è maggiore o uguale a 0.75 allora aumenta la priorità del 
-    processo che estrae dati dal buffer
+    Monitora il livello di riempimento del buffer. Se questo è minore o uguale a 25% allora aumenta la priorità del
+    processo che inserisce dati nel buffer e diminuisce quella del processo di estrazione
 */
 int main(int argc, char* argv[]) {
     //Ottiene i pid dei processi che inseriscono e che estraggono i dati dal buffer, forniti come argomenti al programma
@@ -93,19 +102,10 @@ int main(int argc, char* argv[]) {
             boost_priority(insert_proc, insert_sched_param, remove_proc, remove_sched_param, (int)floor((25 - percentage) * (MAXIMUM_PRIORITY / 25.0)));
         }
 
-        //Se la percentuale di riempimento è maggiore o uguale al 75% allora aumenta la priorità del processo di estrazione e
-        //dimunuisce la priorità del processo di inserimento.
-        //La nuova priorità che viene attribuita al processo di estrazione è definita dalla funzione
-        //floor((percentage-75)*(MAXIMUM_PRIORITY/25.0))
-        else if(percentage >= 75) {
-            boost_priority(remove_proc, remove_sched_param, insert_proc, insert_sched_param, (int)floor((percentage - 75) * (MAXIMUM_PRIORITY / 25.0)));
-        }
-
         //Se la percentuale di riempimento è compresa fra il 26% e il 74%, decrementa la priorità di entrambi i 
         //processi di un'unità 
         else {
-            decrement_priority(remove_proc, remove_sched_param);
-            decrement_priority(insert_proc, insert_sched_param);
+            decrement_priority(insert_proc, insert_sched_param, remove_proc);
         }
 
         //Cancella il messaggio stampato su standard input nella precedente iterazione del while loop
@@ -120,20 +120,16 @@ int main(int argc, char* argv[]) {
             percentage_string.push_back(' ');
         }
 
-        //Converte la priorità del processo di inserimento in stringa; se la priorità è nulla, allora converte in
-        //stringa il nice value di tale processo
-        std::string insert_sched_param_string = std::to_string((insert_sched_param.sched_priority) 
-            ? insert_sched_param.sched_priority : (-getpriority(PRIO_PROCESS, insert_proc)));
+        //Converte la priorità statica del processo di inserimento in stringa
+        std::string insert_sched_param_string = std::to_string(insert_sched_param.sched_priority);
 
         //Si assicura che la stringa abbia lunghezza 3
         while(insert_sched_param_string.size() < 3) {
             insert_sched_param_string.push_back(' ');
         }
 
-        //Converte la priorità del processo di rimozione in stringa; se la priorità è nulla, allora converte in
-        //stringa il nice value di tale processo
-        std::string remove_sched_param_string = std::to_string((remove_sched_param.sched_priority)
-            ? remove_sched_param.sched_priority : (-getpriority(PRIO_PROCESS, remove_proc)));
+        //Converte in stringa l'opposto del nice value del processo di rimozione
+        std::string remove_sched_param_string = std::to_string(-getpriority(PRIO_PROCESS, remove_proc));
 
         //Si assicura che la stringa abbia lunghezza 3
         while(remove_sched_param_string.size() < 3) {

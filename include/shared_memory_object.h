@@ -11,7 +11,7 @@
     struct contenente gli elementi che si vuole condividere con i vari processi. Esso è dotato dei seguenti campi:
 
         -shared_buffer: il buffer condiviso dai processi
-        -action_before_insertion: il function object che definisce l'azione da eseguire prima di inserire un elemento nel buffer
+        -action_before_insertion: il function object che definisce l'azione da eseguire per generare l'elemento da inserire nel buffer
         -action_after_extraction: il function object che definisce l'azione da eseguire dopo aver estratto un elemento dal buffer
 
     Questo struct serve a fornire all'utente la possibilità di personalizzare alcuni aspetti del funzionamento del programma:
@@ -19,7 +19,7 @@
 
         -la dimensione del buffer e il tipo di oggetti che può contenere
         -il tipo del campo action_before_insertion, così da poter definire una propria implementazione dell'azione che si
-            vuole eseguire prima di inserire un elemento
+            vuole eseguire per generare un elemento
         -il tipo del campo action_after_extraction, così da poter definire una propria implementazione dell'azione che si 
             vuole eseguire dopo aver estratto un elemento
 
