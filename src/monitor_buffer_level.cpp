@@ -51,7 +51,6 @@ void decrement_priority(pid_t a, struct sched_param& a_sched_param, pid_t b) {
     processo insert_into_buffer e diminuisce quella di remove_from_buffer, così da riportare il livello a un valore accettabile
 */
 int main(int argc, char* argv[]) {
-    //Ottiene i pid dei processi che inseriscono e che estraggono i dati dal buffer, forniti come argomenti al programma
     pid_t insert_proc = (pid_t)std::stoi(std::string{argv[1]});
     pid_t remove_proc = (pid_t)std::stoi(std::string{argv[0]});
 
@@ -70,10 +69,8 @@ int main(int argc, char* argv[]) {
     ftruncate(shared_memory_fd, sizeof(shared_memory_object));
     //L'area di memoria condivisa viene mappata nel proprio spazio degli indirizzi logici
     shared_memory_object * shared_memory = (shared_memory_object*)mmap(NULL, sizeof(shared_memory_object), PROT_READ | PROT_WRITE, MAP_SHARED, shared_memory_fd, 0);
-    //Ottiene l'accesso al buffer condiviso
     auto shared_buff = &shared_memory->shared_buffer;
 
-    //Stampa eventuali messaggi di errore
     if(errno) {
         perror("");
     }
@@ -114,21 +111,18 @@ int main(int argc, char* argv[]) {
             write(1, "\b", 1);
         }
 
-        //Converte la percentuale di riempimento in stringa e si assicura che questa abbia lunghezza 15
         std::string percentage_string = std::to_string(percentage) + std::string("%");
 
         while(percentage_string.size() < 15) {
             percentage_string.push_back(' ');
         }
 
-        //Converte la priorità statica del processo di inserimento in stringa e si assicura che questa abbia lunghezza 3
         std::string insert_sched_param_string = std::to_string(insert_sched_param.sched_priority);
 
         while(insert_sched_param_string.size() < 3) {
             insert_sched_param_string.push_back(' ');
         }
 
-        //Converte l'opposto del nice value del processo di rimozione in stringa e si assicura che questa abbia lunghezza 3
         std::string remove_sched_param_string = std::to_string(-getpriority(PRIO_PROCESS, remove_proc));
 
         while(remove_sched_param_string.size() < 3) {

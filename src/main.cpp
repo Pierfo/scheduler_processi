@@ -29,7 +29,6 @@ int main(int argc, char * argv[], char * env[]) {
     int nanoseconds = -1;
 
     try {
-        //Ottiene i secondi e nanosecondi per cui il programma dev'essere eseguito
         seconds = std::stoi(std::string{argv[1]});
         nanoseconds = std::stoi(std::string{argv[2]});
     }
@@ -86,16 +85,13 @@ int main(int argc, char * argv[], char * env[]) {
     //Vettore che conterrà i pid dei processi figli
     std::vector<pid_t> children {};
 
-    //Stampa l'eventuale messaggio di errore
     if(errno) {
         perror("");
     }
 
-    //Crea un nuovo processo
     pid_t pid = fork();
 
     if(pid == 0) {
-        //Se è il processo figlìo allora esegue il programma di estrazione dei dati dal buffer
         execve("../build_remove_from_buffer/remove_from_buffer", argv, env);
 
         if(errno) {
@@ -104,14 +100,12 @@ int main(int argc, char * argv[], char * env[]) {
     }
 
     else {
-        //Se è il processo genitore allora inserisce il pid del processo figlio nel vettore
         children.push_back(pid);
     }
 
     pid = fork();
     
     if(pid == 0) {
-        //Se è il processo figlio allora esegue il programma di inserimento dei dati nel buffer
         execve("../build_insert_into_buffer/insert_into_buffer", argv, env);
 
         if(errno) {
@@ -123,8 +117,7 @@ int main(int argc, char * argv[], char * env[]) {
         children.push_back(pid);
     }
 
-    //Prepara l'area di memoria dove salvare i pid dei due processi creati. Tale area sarà poi passata come
-    //argomento al programma di monitoraggio del livello del buffer
+    //È necessario passare i pid dei due processi figli appena creati come argomento per il processo monitor_buffer_level
     char** args = (char**)malloc(3*sizeof(char*));
     
     for(int i = 0; i < children.size(); i++) {
@@ -139,14 +132,11 @@ int main(int argc, char * argv[], char * env[]) {
         args[i][arg.size()] = 0;
     }
 
-    //Quando si passano degli argomenti, l'ultimo puntatore dev'essere NULL
     args[2] = NULL;
 
     pid = fork();
 
     if(pid == 0) {
-        //Se è il processo figlio allora esegue il programma di monitoraggio del livello del buffer, passando args 
-        //come argomento
         execve("../build_monitor_buffer_level/monitor_buffer_level", args, env);
 
         if(errno) {

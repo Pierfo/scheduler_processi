@@ -51,7 +51,6 @@ matrix<N>& matrix<N>::operator=(const matrix<N>& m) {
 //Calcola il determinante
 template<int N>
 double matrix<N>::determinant() const {
-    //Alloca nell'heap un array bidimensionale e vi copia il contenuto della matrice
     double** m = (double**)malloc(N*sizeof(double*));
 
     for(int i = 0; i < N; i++) {
@@ -85,7 +84,6 @@ matrix<N> matrix<N>::invert() const {
 
     matrix<N> inverse {};
 
-    //Alloca lo spazio per la costruzione della matrice ottenuta rimuovendo una riga e una colonna dalla matrice originale
     double** m_tr = (double**)malloc((N-1)*sizeof(double*));
     
     for(int i = 0; i < N-1; i++) {
@@ -94,14 +92,12 @@ matrix<N> matrix<N>::invert() const {
 
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            //Costruisce la matrice ottenuta rimuovendo l'i-esima riga e la j-esima colonna dalla matrice originale
             remove_row_and_column(m_tr, NULL, i, j, N);
 
             inverse.at(i, j) = ((i + j) % 2 == 0 ? 1 : -1) * calculate_determinant(m_tr, N-1) / det;
         }
     }
 
-    //Dealloca lo spazio
     for(int k = 0; k < N-1; k++) {
         free(m_tr[k]);
     }
@@ -140,14 +136,12 @@ matrix<N> matrix<N>::transpose() const {
 //Utility function per il calcolo del determinante. Calcola ricorsivamente il determinante utilizzando la formula di Laplace
 template<int N>
 double matrix<N>::calculate_determinant(double** m, int l) const {        
-    //Caso base
     if(l == 1) {
         return m[0][0];
     }
 
     double det = 0;
     
-    //Alloca lo spazio per la costruzione della matrice ottenuta rimuovendo una riga e una colonna dalla matrice originale
     double** m_tr = (double**)malloc((l-1)*sizeof(double*));
     
     for(int i = 0; i < l-1; i++) {
@@ -155,14 +149,11 @@ double matrix<N>::calculate_determinant(double** m, int l) const {
     }
     
     for(int i = 0; i < l; i++) {
-        //Costruisce la matrice ottenuta rimuovendo l'i-esima riga e la prima colonna dalla matrice originale
         remove_row_and_column(m_tr, m, i, 0, l);
         
-        //Applica la formula di laplace
         det += (i % 2 == 0 ? 1 : -1) * m[i][0] * calculate_determinant(m_tr, l-1);
     }
     
-    //Dealloca lo spazio
     for(int i = 0; i < l-1; i++) {
         free(m_tr[i]);
     }
@@ -200,7 +191,7 @@ template<int N>
 std::ostream& operator<< (std::ostream& o, matrix<N> m) {
     std::string elements[N*N];
 
-    //Converte ciascun numero in stringa e lo salva in elements
+    //Converte ciascun termine della matrice in stringa
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
             std::stringstream s {};
@@ -224,7 +215,6 @@ std::ostream& operator<< (std::ostream& o, matrix<N> m) {
         }
     }
     
-    //Stampa il contenuto
     o << std::endl;
     for(int i = 0; i < N; i++) {
         o << "| ";

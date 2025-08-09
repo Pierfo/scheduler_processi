@@ -15,10 +15,8 @@ int main(int argc, char * argv[]) {
     ftruncate(shared_memory_fd, sizeof(shared_memory_object));
     //L'area di memoria condivisa viene mappata nel proprio spazio degli indirizzi logici
     shared_memory_object * shared_memory = (shared_memory_object*)mmap(NULL, sizeof(shared_memory_object), PROT_READ | PROT_WRITE, MAP_SHARED, shared_memory_fd, 0);
-    //Ottiene l'accesso al buffer condiviso
     auto shared_buff = &shared_memory->shared_buffer;
     
-    //Stampa eventuali messaggi di errore
     if(errno) {
         perror("");
     }
