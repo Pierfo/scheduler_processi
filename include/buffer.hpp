@@ -11,6 +11,8 @@ buffer<T, N>::buffer()
     pthread_mutexattr_init(&monitor_attr);
     //Fa sì che il mutex definito con monitor_attr possa essere acceduto da più processi
     pthread_mutexattr_setpshared(&monitor_attr, PTHREAD_PROCESS_SHARED);
+    //Fa sì cje il mutex definito con monitor_attr adotti la priority inheritance
+    pthread_mutexattr_setprotocol(&monitor_attr, PTHREAD_PRIO_INHERIT);
     //Inizializza il mutex buffer_access
     pthread_mutex_init(&buffer_access, &monitor_attr);
 
