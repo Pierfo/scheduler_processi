@@ -82,7 +82,6 @@ int main(int argc, char* argv[]) {
     sched_getparam(remove_proc, &remove_sched_param);
 
     std::string end_part {};
-    write(1, "Livello di riempimento: ", 24);
     
     while(true) {
         //Ottiene la percentuale di riempimento del buffer. Per come questa funzione è stata costruita, si ha che il
@@ -107,9 +106,7 @@ int main(int argc, char* argv[]) {
         }
 
         //Cancella il messaggio stampato su standard input nella precedente iterazione del while loop
-        for(char c: end_part) {
-            write(1, "\b", 1);
-        }
+        write(1, "\r", 1);
 
         std::string percentage_string = std::to_string(percentage) + std::string("%");
 
@@ -129,7 +126,7 @@ int main(int argc, char* argv[]) {
             remove_sched_param_string.push_back(' ');
         }
 
-        end_part = percentage_string + std::string{"     insert_into_buffer: "} 
+        end_part = std::string{"Livello di riempimento: "} + percentage_string + std::string{"     insert_into_buffer: "} 
             + insert_sched_param_string + std::string{"          remove_from_buffer: "}
             + remove_sched_param_string;
 
