@@ -38,5 +38,7 @@ int main() {
         system("rm script.sh");
     }
 
+    system("rm CMakeLists.txt");
+
     return 0;
 }

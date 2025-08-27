@@ -89,10 +89,19 @@ int main(int argc, char * argv[], char * env[]) {
         perror("");
     }
 
+    char arguments_buffer[50];
+    int arguments_index = 0;
+
     pid_t pid = fork();
 
     if(pid == 0) {
-        execve("../build_remove_from_buffer/remove_from_buffer", argv, env);
+        char * arguments[2];
+        arguments[0] = arguments_buffer + arguments_index;
+        strcpy(arguments[0], "./remove_from_buffer");
+        arguments_index += strlen("./remove_from_buffer") + 1;
+        arguments[1] = (char*)NULL;
+
+        execve("../build_remove_from_buffer/remove_from_buffer", (char* const*)arguments, env);
 
         if(errno) {
             perror("");
@@ -105,8 +114,14 @@ int main(int argc, char * argv[], char * env[]) {
 
     pid = fork();
     
-    if(pid == 0) {
-        execve("../build_insert_into_buffer/insert_into_buffer", argv, env);
+    if(pid == 0) {        
+        char * arguments[2];
+        arguments[0] = arguments_buffer + arguments_index;
+        strcpy(arguments[0], "./insert_into_buffer");
+        arguments_index += strlen("./insert_into_buffer") + 1;
+        arguments[1] = (char*)NULL;
+        
+        execve("../build_insert_into_buffer/insert_into_buffer", (char* const*)arguments, env);
 
         if(errno) {
             perror("");
@@ -117,27 +132,22 @@ int main(int argc, char * argv[], char * env[]) {
         children.push_back(pid);
     }
 
-    //È necessario passare i pid dei due processi figli appena creati come argomento per il processo monitor_buffer_level
-    char** args = (char**)malloc(3*sizeof(char*));
-    
-    for(int i = 0; i < children.size(); i++) {
-        //Converte ciascun pid in stringa e poi la copia in args
-        std::string arg {std::to_string(children[i])};
-        args[i] = (char*)malloc(arg.size() + 1);
-
-        for(int j = 0; j < arg.size(); j++) {
-            args[i][j] = arg[j];
-        }        
-
-        args[i][arg.size()] = 0;
-    }
-
-    args[2] = NULL;
-
     pid = fork();
 
     if(pid == 0) {
-        execve("../build_monitor_buffer_level/monitor_buffer_level", args, env);
+        char * arguments[0];
+        arguments[0] = arguments_buffer + arguments_index;
+        strcpy(arguments[0], "./monitor_buffer_level");
+        arguments_index += strlen("./monitor_buffer_level") + 1;
+
+        for(int i = 0; i < 2; i++) {
+            arguments[i+1] = arguments_buffer + arguments_index;
+            sprintf(arguments[i+1], "%d", children[i]);
+            arguments_index += strlen(arguments[i+1]) + 1;
+        }
+
+        arguments[3] = (char*)NULL;
+        execve("../build_monitor_buffer_level/monitor_buffer_level", (char * const* )arguments, env);
 
         if(errno) {
             perror("");
@@ -155,12 +165,6 @@ int main(int argc, char * argv[], char * env[]) {
     for(pid_t p : children) {
         kill(p, SIGKILL);
     }
-
-    for(int i = 0; i < 3; i++) {
-        free(args[i]);
-    }
-
-    free(args);
 
     //Dealloca l'area di memoria condivisa
     shm_unlink("buffer");

@@ -51,8 +51,8 @@ void decrement_priority(pid_t a, struct sched_param& a_sched_param, pid_t b) {
     processo insert_into_buffer e diminuisce quella di remove_from_buffer, così da riportare il livello a un valore accettabile
 */
 int main(int argc, char* argv[]) {
-    pid_t insert_proc = (pid_t)std::stoi(std::string{argv[1]});
-    pid_t remove_proc = (pid_t)std::stoi(std::string{argv[0]});
+    pid_t insert_proc = (pid_t)std::stoi(std::string{argv[2]});
+    pid_t remove_proc = (pid_t)std::stoi(std::string{argv[1]});
 
     //Ottiene una copia dei propri parametri di scheduling
     struct sched_param monitor_sched_param;
