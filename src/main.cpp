@@ -89,6 +89,7 @@ int main(int argc, char * argv[], char * env[]) {
         perror("");
     }
 
+    //Conterrà gli argomenti da passare ai tre processi
     char arguments_buffer[50];
     int arguments_index = 0;
 
