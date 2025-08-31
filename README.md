@@ -14,7 +14,7 @@ dove `sec` e `nsec` indicano rispettivamente per quanti secondi e nanosecondi il
 
 ## Scheduling dei processi
 
-Com'è stato detto all'inizio, le priorità dei processi `insert_into_buffer` e `remove_from_buffer` sono alterate dinamicamente a seconda della percentuale di riempimento del buffer: in "condizione di equilibrio" entrambi i processi sono schedulati con politica `SCHED_OTHER` e ad ambedue è attributo un `nice value` pari a `0`; nel momento in cui la percentuale scende al di sotto del 25%, tuttavia, si fa passare il processo `insert_into_buffer` alla politica `SCHED_RR` con priorità statica definita dalla funzione
+Com'è stato detto all'inizio, le priorità dei processi `insert_into_buffer` e `remove_from_buffer` sono alterate dinamicamente a seconda della percentuale di riempimento del buffer: in "condizione di equilibrio" entrambi i processi sono schedulati con politica `SCHED_OTHER` e ad ambedue è attributo un `nice value` pari a `0`; nel momento in cui la percentuale scende al di sotto del 25%, invece, si fa passare il processo `insert_into_buffer` alla politica `SCHED_RR` con priorità statica definita dalla funzione
 ```c
 max(floor((25 - percentage) * (MAXIMUM_PRIORITY / 25.0)), prio)
 ```
@@ -23,7 +23,7 @@ dove `percentage` è la percentuale, `MAXIMUM_PRIORITY` è il massimo valore di 
 max(floor(prio * 19 / MAXIMUM_PRIORITY), nice)
 ```
 dove `nice` è il nice value attuale.
-Una volta che la percentuale di riempimento è tornata a un valore accettabile, allora si decrementano progressivamente la priorità statica e il nice value rispettivamente di `insert_into_buffer` e `remove_from_buffer`, fino a ritornare alla condizione di equilibrio.
+Una volta che la percentuale di riempimento è tornata a un valore accettabile, si decrementano progressivamente la priorità statica e il nice value rispettivamente di `insert_into_buffer` e `remove_from_buffer`, fino a ritornare alla condizione di equilibrio.
 Per quanto riguarda i processi `main` e `monitor_buffer_level`, a essi è attribuita priorità massima e politica di scheduling `SCHED_FIFO`, così da assicurarsi che la loro esecuzione non sia ostacolata dagli altri due procesi.
 
 ## buffer.h
