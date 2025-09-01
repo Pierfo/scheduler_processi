@@ -6,7 +6,7 @@
 
 //Compila il programma. Il file eseguibile si troverà nella directory "build_main"
 int main() {
-    std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "main"};
+    std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "parasite", "main"};
 
     for(std::string name : v) {
         std::ofstream makefile {"CMakeLists.txt"};

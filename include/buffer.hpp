@@ -98,9 +98,9 @@ double buffer<T, N>::calculate_fill_percentage() {
     pthread_mutex_lock(&buffer_access);
     
     //Se la percentuale di riempimento non è variata dalla sua ultima lettura, aspetta che si verifichi un inserimento o estrazione
-    while(!change_happened) {
+    /*while(!change_happened) {
         pthread_cond_wait(&no_change_happened, &buffer_access);
-    }
+    }*/
 
     int nof_elements = 0;
 
