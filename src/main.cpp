@@ -5,9 +5,12 @@
 #include <string.h>
 #include <signal.h>
 #include <sched.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <iostream>
 #include <vector>
 #include <string>
+#include <fstream>
 #include "shared_memory_object.h"
 #include "pause.h"
 
@@ -52,6 +55,42 @@ int main(int argc, char * argv[], char * env[]) {
         std::cout << "Errore: il secondo parametro non può superare 999999999" << std::endl;
         return 0;
     }
+
+    std::string mode;
+    
+    system("uname -a > out.txt");
+    std::fstream out {"out.txt"};
+    std::string line {};
+    getline(out, line);
+
+    if(line.find("generic") != std::string::npos) {
+        mode = "generic";
+    }
+
+    else if(line.find("realtime") != std::string::npos) {
+        mode = "realtime";
+    }
+
+    else {
+        std::cout << "Could not find preemption mode" << std::endl;
+        return 0;
+    }
+
+    out.close();
+    system("rm out.txt");
+
+    mlockall(MCL_FUTURE);
+
+    cpu_set_t set;
+    cpu_set_t cpu0;
+    cpu_set_t cpu1;
+    CPU_ZERO(&set);
+    CPU_ZERO(&cpu0);
+    CPU_ZERO(&cpu1);
+    CPU_SET(0, &cpu0);
+    CPU_SET(1, &cpu1);
+    CPU_OR(&set, &cpu0, &cpu1);
+    sched_setaffinity(getpid(), sizeof(set), &set);
 
     //Ottiene una copia dei propri parametri di scheduling
     struct sched_param par;
@@ -134,6 +173,26 @@ int main(int argc, char * argv[], char * env[]) {
     }
 
     pid = fork();
+    
+    if(pid == 0) {        
+        char * arguments[2];
+        arguments[0] = arguments_buffer + arguments_index;
+        strcpy(arguments[0], "./parasite");
+        arguments_index += strlen("./parasite") + 1;
+        arguments[1] = (char*)NULL;
+        
+        execve("../build_parasite/parasite", (char* const*)arguments, env);
+
+        if(errno) {
+            perror("");
+        }
+    }
+
+    else {
+        children.push_back(pid);
+    }
+
+    pid = fork();
 
     if(pid == 0) {
         char * arguments[0];
@@ -167,10 +226,17 @@ int main(int argc, char * argv[], char * env[]) {
         kill(p, SIGKILL);
     }
 
+    munlockall();
+
     //Dealloca l'area di memoria condivisa
     shm_unlink("buffer");
 
-    std::cout << std::endl;
+    std::cout << std::endl << "Buffer has been empty for " << ((shared_memory_object*)shared_memory)->empty_ticks << " ticks" << std::endl
+                << "Average fill percentage: " << ((shared_memory_object*)shared_memory)->avg_percentage << "%" << std::endl;
     
+    char command[1000];
+    sprintf(command, "echo \"%ld %f %d %d\" >> ../%s.log", ((shared_memory_object*)shared_memory)->empty_ticks, 
+            ((shared_memory_object*)shared_memory)->avg_percentage, seconds, nanoseconds, mode.c_str());
+    system(command);
     return 0;
 }

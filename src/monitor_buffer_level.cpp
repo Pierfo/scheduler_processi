@@ -3,12 +3,13 @@
 #include <fcntl.h>
 #include <string>
 #include <sched.h>
+#include <string.h>
 #include <math.h>
 #include <sys/resource.h>
 #include "shared_memory_object.h"
 
 //Il massimo valore di priorità che può essere attribuito al processo di inserimento
-#define MAXIMUM_PRIORITY 80
+#define MAXIMUM_PRIORITY 99
 
 //Aumenta la priorità del processo a, facendolo passare alla politica SCHED_RR, e diminuisce quella del processo b,
 //facendolo passare alla politica di default SCHED_OTHER.
@@ -51,6 +52,12 @@ void decrement_priority(pid_t a, struct sched_param& a_sched_param, pid_t b) {
     processo insert_into_buffer e diminuisce quella di remove_from_buffer, così da riportare il livello a un valore accettabile
 */
 int main(int argc, char* argv[]) {
+
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    CPU_SET(1, &set);
+    sched_setaffinity(getpid(), sizeof(set), &set);
+
     pid_t insert_proc = (pid_t)std::stoi(std::string{argv[2]});
     pid_t remove_proc = (pid_t)std::stoi(std::string{argv[1]});
 
@@ -58,9 +65,7 @@ int main(int argc, char* argv[]) {
     struct sched_param monitor_sched_param;
     sched_getparam(0, &monitor_sched_param);
 
-    //Conferisce a sé stesso la priorità massima con politica SCHED_FIFO
-    monitor_sched_param.sched_priority = sched_get_priority_max(SCHED_FIFO);
-    sched_setscheduler(0, SCHED_FIFO, &monitor_sched_param);
+    
 
     //Apre un collegamento con la memoria condivisa dal processo main
     int shared_memory_fd = shm_open("buffer", O_RDWR, 0600);
@@ -82,14 +87,23 @@ int main(int argc, char* argv[]) {
     sched_getparam(remove_proc, &remove_sched_param);
 
     std::string end_part {};
+    unsigned long long nof_iterations = 0;
     
     while(true) {
+        //Conferisce a sé stesso la priorità massima con politica SCHED_FIFO
+        monitor_sched_param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+        sched_setscheduler(0, SCHED_FIFO, &monitor_sched_param);
+
         //Ottiene la percentuale di riempimento del buffer. Per come questa funzione è stata costruita, si ha che il
         //processo deve rimanere bloccato su tale istruzione finché non è stato effettuato almeno un inserimento o 
         //rimozione dall'ultima volta che è stata letta la percentuale. Così facendo ci si assicura che i processi di
         //inserimento e rimozione abbiano comunque la possibilità di eseguire nonostante il fatto che il processo di 
         //monitoraggio abbia la priorità massima
         double percentage = (shared_buff->calculate_fill_percentage() * 100);
+
+        if(percentage == 0) {
+            shared_memory->empty_ticks++;
+        }
 
         //Se la percentuale di riempimento è minore o uguale al 25% allora aumenta la priorità del processo di inserimento e 
         //diminuisce quella del processo di rimozione.
@@ -105,6 +119,12 @@ int main(int argc, char* argv[]) {
             decrement_priority(insert_proc, insert_sched_param, remove_proc);
         }
 
+        shared_memory->avg_percentage = (shared_memory->avg_percentage * nof_iterations + percentage) / ++nof_iterations;
+
+        //Conferisce a sé stesso la priorità massima con politica SCHED_FIFO
+        monitor_sched_param.sched_priority = 0;
+        sched_setscheduler(0, SCHED_OTHER, &monitor_sched_param);
+        
         //Cancella il messaggio stampato su standard input nella precedente iterazione del while loop
         write(1, "\r", 1);
 
@@ -131,5 +151,9 @@ int main(int argc, char* argv[]) {
             + remove_sched_param_string;
 
         write(1, end_part.c_str(), end_part.size());
+
+        //setpriority(PRIO_PROCESS, 0, 10);
+
+        
     }
 }

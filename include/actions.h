@@ -3,6 +3,8 @@
 
 #include "matrix.h"
 #include "pause.h"
+#include <fcntl.h>
+#include <errno.h>
 
 /*
     Function object che definisce la funzione che dev'essere eseguita per generare un nuovo elemento da inserire nel buffer
@@ -25,6 +27,7 @@ class matrix_action_before_insertion {
             det = mat.determinant();
         }        
 
+        if(errno) perror("");
         return mat.invert();
     };
 };
@@ -36,7 +39,9 @@ template<int N>
 class matrix_action_after_extraction {
     public:
     matrix_action_after_extraction() {}; //Costruttore di default
-    void operator() (matrix<N> mat) {mat.invert();}; //Overriding del'operatore (): costruisce la matrice inversa
+    void operator() (matrix<N> mat) {
+        mat.invert();
+    }; //Overriding del'operatore (): costruisce la matrice inversa
 };
 
 #endif

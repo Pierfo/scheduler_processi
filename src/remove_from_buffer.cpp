@@ -8,6 +8,12 @@
     all'interno dello struct shared_memory_object, il quale è condiviso fra i vari processi 
 */
 int main(int argc, char * argv[]) {
+
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    CPU_SET(1, &set);
+    sched_setaffinity(getpid(), sizeof(set), &set);
+
     //Apre un collegamento con la memoria condivisa costruita dal processo main
     int shared_memory_fd = shm_open("buffer", O_RDWR, 0600);
     //Tronca l'area di memoria rappresentata dal file descriptor shared_memory_fd in modo tale da avere dimensione pari 
