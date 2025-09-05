@@ -3,10 +3,16 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <fcntl.h>
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+
+#define FILE_SIZE 100000000
 
 //Compila il programma. Il file eseguibile si troverà nella directory "build_main"
 int main() {
-    std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "parasite", "main"};
+    std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "parasite", "recover", "main"};
 
     for(std::string name : v) {
         std::ofstream makefile {"CMakeLists.txt"};
@@ -33,12 +39,41 @@ int main() {
         script.close();
 
         system("chmod +x script.sh");
-        std::cout << std::endl << std::endl << "conpilazione di " << name << std::endl << std::endl;
+        std::cout << std::endl << std::endl << "Compilazione di " << name << std::endl << std::endl;
         system("./script.sh");
         system("rm script.sh");
     }
 
     system("rm CMakeLists.txt");
+
+    int fd = open("file.txt", O_CREAT | O_EXCL | O_RDWR, 0666);
+
+    if(errno == EEXIST) {
+        return 0;
+    }
+
+    if(fd == -1) {
+        perror("");
+        return 0;
+    }
+
+    std::cout << std::endl << std::endl << "Creazione di file.txt" << std::endl;
+
+    char percentage[100];
+    char * content = "AAAAAAAAAA";
+    int content_size = strlen(content);
+
+    for(long long i = 0; i < FILE_SIZE / content_size; i++) {
+        double value = (i + 1) / ((double)FILE_SIZE / content_size);
+        sprintf(percentage, "%f%%\r", (value * 100));
+        write(1, percentage, strlen(percentage));
+        write(fd, content, content_size);
+        
+        if(errno) perror("");
+    }
+
+    std::cout << std::endl << std::endl;
+    close(fd);
 
     return 0;
 }

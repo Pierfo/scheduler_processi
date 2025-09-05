@@ -2,6 +2,8 @@
 #define BUFFER_HPP
 
 #include <pthread.h>
+#include <string.h>
+#include <iostream>
 
 //Inizializza un buffer vuoto
 template<typename T, int N>
@@ -11,7 +13,7 @@ buffer<T, N>::buffer()
     pthread_mutexattr_init(&monitor_attr);
     //Fa sì che il mutex definito con monitor_attr possa essere acceduto da più processi
     pthread_mutexattr_setpshared(&monitor_attr, PTHREAD_PROCESS_SHARED);
-    //Fa sì cje il mutex definito con monitor_attr adotti la priority inheritance
+    pthread_mutexattr_setrobust(&monitor_attr, PTHREAD_MUTEX_ROBUST);
     pthread_mutexattr_setprotocol(&monitor_attr, PTHREAD_PRIO_INHERIT);
     //Inizializza il mutex buffer_access
     pthread_mutex_init(&buffer_access, &monitor_attr);
@@ -24,17 +26,34 @@ buffer<T, N>::buffer()
     pthread_cond_init(&buffer_empty, &cond_attr);
     pthread_cond_init(&buffer_full, &cond_attr);
     pthread_cond_init(&no_change_happened, &cond_attr);
+    pthread_cond_init(&buffer_not_full, &cond_attr);
+    pthread_cond_init(&theres_still_someone, &cond_attr);
+
+    explicit_bzero(buf, N);
+    process_accessing = 0;
+
+    is_on = true;
 }
 
 //Inserisce un elemento alla fine del buffer
 template<typename T, int N>
 void buffer<T, N>::insert(T elem) {
+    ////std::cout << "start inserting" << std::endl;
     //Ottiene il mutex
     pthread_mutex_lock(&buffer_access);
 
+    process_accessing++;
+
     bool was_empty = is_empty();
     //Se il buffer è pieno allora mette il processo nella coda di attesa relativa a buffer_full
-    while(is_full()) {
+    while(is_full() || !is_on) {
+        if(!is_on) {
+            pthread_mutex_unlock(&buffer_access);
+
+            return;
+        }
+
+        pthread_cond_signal(&buffer_not_full);
         pthread_cond_wait(&buffer_full, &buffer_access);
     }
     
@@ -53,20 +72,35 @@ void buffer<T, N>::insert(T elem) {
     if(was_empty) {
         pthread_cond_signal(&buffer_empty);
     }
+
+    process_accessing--;
+    pthread_cond_signal(&theres_still_someone);
     
     //Libera il mutex
     pthread_mutex_unlock(&buffer_access);
+
+    ////std::cout << "done inserting" << std::endl;
+
 }
 
 //Estrae un elemento dall'inizio del buffer
 template<typename T, int N>
 T buffer<T, N>::extract() {
+    ////std::cout << "\tstart extracting" << std::endl;
     //Ottiene il mutex
     pthread_mutex_lock(&buffer_access);
 
+    process_accessing++;
+
     bool was_full = is_full();
     //Se il buffer è vuoto allora mette il processo nella coda di attesa relativa a buffer_empty
-    while(is_empty()) {
+    while(is_empty() || !is_on) {
+        if(!is_on) {
+            pthread_mutex_unlock(&buffer_access);
+
+            return T{};
+        }
+
         pthread_cond_wait(&buffer_empty, &buffer_access);
     }
 
@@ -86,19 +120,31 @@ T buffer<T, N>::extract() {
         pthread_cond_signal(&buffer_full);
     }
 
+    process_accessing--;
+    pthread_cond_signal(&theres_still_someone);
+
     //Libera il mutex
     pthread_mutex_unlock(&buffer_access);
+    ////std::cout << "\tdone extracting" << std::endl;
     return elem;
 }
 
 //Calcola la percentuale di riempimento del buffer
 template<typename T, int N>
 double buffer<T, N>::calculate_fill_percentage() {
+    //std::cout << "\t\tstart calculating" << std::endl;
     //Ottiene il mutex
     pthread_mutex_lock(&buffer_access);
+
+    process_accessing++;
     
     //Se la percentuale di riempimento non è variata dalla sua ultima lettura, aspetta che si verifichi un inserimento o estrazione
-    /*while(!change_happened) {
+    /*while(!change_happened || !is_on) {
+        if(!is_on) {
+            pthread_mutex_unlock(&buffer_access);
+
+            return;
+        }
         pthread_cond_wait(&no_change_happened, &buffer_access);
     }*/
 
@@ -112,15 +158,95 @@ double buffer<T, N>::calculate_fill_percentage() {
 
     change_happened = false;
 
+    process_accessing--;
+    pthread_cond_signal(&theres_still_someone);
+
     //Libera il mutex
     pthread_mutex_unlock(&buffer_access);
-
+    //std::cout << "\t\tdone calculating" << std::endl;
     return nof_elements_double / (N - 1);
+}
+
+template<typename T, int N>
+void buffer<T, N>::wait_until_full() {
+    //std::cout << "\t\t\tstart waiting" << std::endl;
+    pthread_mutex_lock(&buffer_access);
+
+    process_accessing++;
+
+    while(!is_full() || !is_on) {
+        if(!is_on) {
+            pthread_mutex_unlock(&buffer_access);
+
+            return;
+        }
+        
+        pthread_cond_wait(&buffer_not_full, &buffer_access);
+    }
+
+    process_accessing--;
+    pthread_cond_signal(&theres_still_someone);
+
+    pthread_mutex_unlock(&buffer_access);
+    //std::cout << "\t\t\tdone waiting" << std::endl;
+}
+
+template<typename T, int N>
+void buffer<T, N>::empty_out() {
+    //std::cout << "\t\t\t\tstart emptying" << std::endl;
+    pthread_mutex_lock(&buffer_access);
+
+    while(process_accessing != 0 || !is_on) {
+        if(!is_on) {
+            pthread_mutex_unlock(&buffer_access);
+
+            return;
+        }
+        //std::cout << "there are still " << process_accessing << "processes" << std::endl;
+        pthread_cond_wait(&theres_still_someone, &buffer_access);
+    }
+
+    //std::cout << "there are still " << process_accessing << "processes" << std::endl;
+
+    process_accessing++;
+
+    while(!is_empty()) {
+        extract();
+    }
+
+    process_accessing--;
+
+    pthread_mutex_unlock(&buffer_access);
+
+    //std::cout << "\t\t\t\tdone emptying" << std::endl;
+}
+
+template<typename T, int N>
+void buffer<T, N>::switch_off() {
+    //std::cout << "\t\t\t\t\tstart switching off" << std::endl;
+    pthread_mutex_lock(&buffer_access);
+    
+    is_on = false;
+
+    pthread_cond_broadcast(&buffer_empty);
+    pthread_cond_broadcast(&buffer_full);
+    pthread_cond_broadcast(&buffer_not_full);
+    pthread_cond_broadcast(&theres_still_someone);
+    pthread_cond_broadcast(&no_change_happened);
+
+    pthread_mutex_unlock(&buffer_access);
+    //std::cout << "\t\t\t\t\tdone switching off" << std::endl;
+}
+
+template<typename T, int N>
+void buffer<T, N>::switch_on() {
+    is_on = true;
 }
 
 //Distrugge il buffer
 template<typename T, int N>
 buffer<T, N>::~buffer() {
+    switch_off();
     //Distrugge il mutex e il relativo attributo
     pthread_mutex_destroy(&buffer_access);
     pthread_mutexattr_destroy(&monitor_attr);
@@ -129,6 +255,8 @@ buffer<T, N>::~buffer() {
     pthread_cond_destroy(&buffer_empty);
     pthread_cond_destroy(&buffer_full);
     pthread_cond_destroy(&no_change_happened);
+    pthread_cond_destroy(&buffer_not_full);
+    pthread_cond_destroy(&theres_still_someone);
     pthread_condattr_destroy(&cond_attr);
 }
 

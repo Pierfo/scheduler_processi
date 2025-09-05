@@ -3,6 +3,7 @@ build_remove_from_buffer/
 build_monitor_buffer_level/
 build_main/
 build_parasite/
+build_recover/
 compile_all
 log.txt
 CMakeLists.txt
@@ -10,3 +11,5 @@ script.sh
 include/actions2.h
 test.cpp
 test
+file.txt
+pids.log

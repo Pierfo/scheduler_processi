@@ -5,11 +5,11 @@
 #include <sched.h>
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
 #include <sys/resource.h>
+#include <signal.h>
 #include "shared_memory_object.h"
 
-//Il massimo valore di priorità che può essere attribuito al processo di inserimento
-#define MAXIMUM_PRIORITY 99
 
 //Aumenta la priorità del processo a, facendolo passare alla politica SCHED_RR, e diminuisce quella del processo b,
 //facendolo passare alla politica di default SCHED_OTHER.
@@ -29,21 +29,16 @@ void boost_priority(pid_t a, struct sched_param& a_sched_param, pid_t b, struct 
 
 //Se la priorità del processo a è maggiore del valore minimo, allora diminuisce questa di un'unità e riduce il nice value
 //del processo b
-void decrement_priority(pid_t a, struct sched_param& a_sched_param, pid_t b) {
-    if(a_sched_param.sched_priority == 0) return;
+void neutral_priority(pid_t a, struct sched_param& a_sched_param, pid_t b, struct sched_param& b_sched_param) {
+    if(a_sched_param.sched_priority == 0 && b_sched_param.sched_priority == 0) return;
     
-    a_sched_param.sched_priority--;
-
-    if(a_sched_param.sched_priority == 0) {
-        sched_setscheduler(a, SCHED_OTHER, &a_sched_param);
-        setpriority(PRIO_PROCESS, a, 0);
-    }
+    a_sched_param.sched_priority = 0;
+    b_sched_param.sched_priority = 0;
+    sched_setscheduler(a, SCHED_OTHER, &a_sched_param);
+    sched_setscheduler(b, SCHED_OTHER, &b_sched_param);
+    setpriority(PRIO_PROCESS, a, 0);
+    setpriority(PRIO_PROCESS, b, 0);
     
-    else {
-        sched_setparam(a, &a_sched_param);
-    }
-
-    setpriority(PRIO_PROCESS, b, a_sched_param.sched_priority * (19) / MAXIMUM_PRIORITY);
     return;
 }
 
@@ -58,14 +53,12 @@ int main(int argc, char* argv[]) {
     CPU_SET(1, &set);
     sched_setaffinity(getpid(), sizeof(set), &set);
 
-    pid_t insert_proc = (pid_t)std::stoi(std::string{argv[2]});
-    pid_t remove_proc = (pid_t)std::stoi(std::string{argv[1]});
+    pid_t insert_proc = (pid_t)strtol(argv[2], NULL, 10);
+    pid_t remove_proc = (pid_t)strtol(argv[1], NULL, 10);
 
     //Ottiene una copia dei propri parametri di scheduling
     struct sched_param monitor_sched_param;
-    sched_getparam(0, &monitor_sched_param);
-
-    
+    sched_getparam(0, &monitor_sched_param);    
 
     //Apre un collegamento con la memoria condivisa dal processo main
     int shared_memory_fd = shm_open("buffer", O_RDWR, 0600);
@@ -87,11 +80,11 @@ int main(int argc, char* argv[]) {
     sched_getparam(remove_proc, &remove_sched_param);
 
     std::string end_part {};
-    unsigned long long nof_iterations = 0;
+//    unsigned long long nof_iterations = 0;
     
     while(true) {
         //Conferisce a sé stesso la priorità massima con politica SCHED_FIFO
-        monitor_sched_param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+        monitor_sched_param.sched_priority = 90;
         sched_setscheduler(0, SCHED_FIFO, &monitor_sched_param);
 
         //Ottiene la percentuale di riempimento del buffer. Per come questa funzione è stata costruita, si ha che il
@@ -102,58 +95,44 @@ int main(int argc, char* argv[]) {
         double percentage = (shared_buff->calculate_fill_percentage() * 100);
 
         if(percentage == 0) {
-            shared_memory->empty_ticks++;
+            //shared_memory->empty_ticks++;
         }
 
         //Se la percentuale di riempimento è minore o uguale al 25% allora aumenta la priorità del processo di inserimento e 
         //diminuisce quella del processo di rimozione.
         //La nuova priorità che viene attribuita al processo di inserimento è definita dalla funzione
         //floor((25-percentage)*(MAXIMUM_PRIORITY/25.0))
-        if(percentage < 25) {
+        /*if(percentage < 25) {
             boost_priority(insert_proc, insert_sched_param, remove_proc, remove_sched_param, (int)floor((25 - percentage) * (MAXIMUM_PRIORITY / 25.0)));
-        }
+        }*/
 
         //Se la percentuale di riempimento è maggiore o uguale al 25%, decrementa di un'unità la priorità del processo 
         //di inserimento
-        else {
-            decrement_priority(insert_proc, insert_sched_param, remove_proc);
+        if(shared_memory->priority_boost == insert_proc) {
+            boost_priority(insert_proc, insert_sched_param, remove_proc, remove_sched_param, MAXIMUM_PRIORITY);
         }
 
-        shared_memory->avg_percentage = (shared_memory->avg_percentage * nof_iterations + percentage) / ++nof_iterations;
+        else if(shared_memory->priority_boost == remove_proc) {
+            boost_priority(remove_proc, remove_sched_param, insert_proc, insert_sched_param, MAXIMUM_PRIORITY);
+        }
+
+        else {
+            neutral_priority(insert_proc, insert_sched_param, remove_proc, remove_sched_param);
+        }
+
+        //shared_memory->avg_percentage = (shared_memory->avg_percentage * nof_iterations + percentage) / ++nof_iterations;
 
         //Conferisce a sé stesso la priorità massima con politica SCHED_FIFO
         monitor_sched_param.sched_priority = 0;
         sched_setscheduler(0, SCHED_OTHER, &monitor_sched_param);
         
-        //Cancella il messaggio stampato su standard input nella precedente iterazione del while loop
-        write(1, "\r", 1);
+        char message[150];
+        sprintf(message, "Livello di riempimento: %10.6f%%          insert_into_buffer: %3d          remove_from_buffer: %3d\r", 
+            percentage, (insert_sched_param.sched_priority ? insert_sched_param.sched_priority : -getpriority(PRIO_PROCESS, insert_proc)),
+            (remove_sched_param.sched_priority ? remove_sched_param.sched_priority : -getpriority(PRIO_PROCESS, remove_proc)));
 
-        std::string percentage_string = std::to_string(percentage) + std::string("%");
-
-        while(percentage_string.size() < 15) {
-            percentage_string.push_back(' ');
-        }
-
-        std::string insert_sched_param_string = std::to_string(insert_sched_param.sched_priority);
-
-        while(insert_sched_param_string.size() < 3) {
-            insert_sched_param_string.push_back(' ');
-        }
-
-        std::string remove_sched_param_string = std::to_string(-getpriority(PRIO_PROCESS, remove_proc));
-
-        while(remove_sched_param_string.size() < 3) {
-            remove_sched_param_string.push_back(' ');
-        }
-
-        end_part = std::string{"Livello di riempimento: "} + percentage_string + std::string{"     insert_into_buffer: "} 
-            + insert_sched_param_string + std::string{"          remove_from_buffer: "}
-            + remove_sched_param_string;
-
-        write(1, end_part.c_str(), end_part.size());
+        write(1, message, strlen(message));
 
         //setpriority(PRIO_PROCESS, 0, 10);
-
-        
     }
 }

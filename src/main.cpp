@@ -11,8 +11,12 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <math.h>
+#include <sys/time.h>
 #include "shared_memory_object.h"
 #include "pause.h"
+
+#define INTERVAL 10
 
 /*
     Avvia l'esecuzione dei processi di inserimento ed estrazione dei dati e di monitoraggio del livello del buffer, 
@@ -82,15 +86,10 @@ int main(int argc, char * argv[], char * env[]) {
     mlockall(MCL_FUTURE);
 
     cpu_set_t set;
-    cpu_set_t cpu0;
-    cpu_set_t cpu1;
     CPU_ZERO(&set);
-    CPU_ZERO(&cpu0);
-    CPU_ZERO(&cpu1);
-    CPU_SET(0, &cpu0);
-    CPU_SET(1, &cpu1);
-    CPU_OR(&set, &cpu0, &cpu1);
-    sched_setaffinity(getpid(), sizeof(set), &set);
+    CPU_SET(0, &set);
+    CPU_SET(1, &set);
+    //sched_setaffinity(getpid(), sizeof(set), &set);
 
     //Ottiene una copia dei propri parametri di scheduling
     struct sched_param par;
@@ -129,7 +128,7 @@ int main(int argc, char * argv[], char * env[]) {
     }
 
     //Conterrà gli argomenti da passare ai tre processi
-    char arguments_buffer[50];
+    char arguments_buffer[150];
     int arguments_index = 0;
 
     pid_t pid = fork();
@@ -172,16 +171,17 @@ int main(int argc, char * argv[], char * env[]) {
         children.push_back(pid);
     }
 
-    pid = fork();
+    //pid = fork();
+    pid_t recover_pid = 0;
     
-    if(pid == 0) {        
+    /*if(pid == 0) {        
         char * arguments[2];
         arguments[0] = arguments_buffer + arguments_index;
-        strcpy(arguments[0], "./parasite");
-        arguments_index += strlen("./parasite") + 1;
+        strcpy(arguments[0], "./recover");
+        arguments_index += strlen("./recover") + 1;
         arguments[1] = (char*)NULL;
         
-        execve("../build_parasite/parasite", (char* const*)arguments, env);
+        execve("../build_recover/recover", (char* const*)arguments, env);
 
         if(errno) {
             perror("");
@@ -190,12 +190,42 @@ int main(int argc, char * argv[], char * env[]) {
 
     else {
         children.push_back(pid);
+
+        recover_pid = pid;
+    }*/
+
+    for(int i = 0; i < 10; i++) {
+        pid = fork();
+        
+        if(pid == 0) {        
+            char * arguments[4];
+            arguments[0] = arguments_buffer + arguments_index;
+            strcpy(arguments[0], "./parasite");
+            arguments_index += strlen("./parasite") + 1;
+            arguments[1] = arguments_buffer + arguments_index;
+            arguments_index += sprintf(arguments[1], "%d", seconds) + 1;
+            arguments[2] = arguments_buffer + arguments_index;
+            arguments_index += sprintf(arguments[2], "%d", nanoseconds) + 1;
+            arguments[3] = (char*)NULL;
+            
+            execve("../build_parasite/parasite", (char* const*)arguments, env);
+
+            if(errno) {
+                perror("");
+            }
+        }
+
+        else {
+            children.push_back(pid);
+        }
     }
+
+    pid_t parent_pid = getpid();
 
     pid = fork();
 
     if(pid == 0) {
-        char * arguments[0];
+        char * arguments[4];
         arguments[0] = arguments_buffer + arguments_index;
         strcpy(arguments[0], "./monitor_buffer_level");
         arguments_index += strlen("./monitor_buffer_level") + 1;
@@ -218,14 +248,119 @@ int main(int argc, char * argv[], char * env[]) {
         children.push_back(pid);
     }
 
-    //Sospende la propria esecuzione per il periodo di tempo definito dall'utente
-    pause_h::sleep(seconds, nanoseconds);
+    double avg = 0;
+    double mse = 0;
 
+    if(seconds > 10) {
+        pause_h::sleep(10, 0);
+        seconds -= 10;
+    }
+
+    else {
+        std::cout << "Warning: not enough time to start making predictions" << std::endl;
+        pause_h::sleep(seconds, 0);
+        seconds = 0;
+    }
+
+    char command[50];
+    sprintf(command, "echo \"\" >> ../%s.csv", mode.c_str());
+    system(command);
+
+    struct timeval start;
+    struct timeval end;
+
+    while(seconds > INTERVAL) {
+        //Sospende la propria esecuzione per il periodo di tempo definito dall'utente
+        pause_h::sleep(INTERVAL, 0);
+        seconds -= INTERVAL;
+        avg = 0;
+        
+        ((shared_memory_object*)shared_memory)->shared_buffer.switch_off();
+        pause_h::sleep(1, 0);
+        for(pid_t p : children) {
+            if(p != recover_pid) {
+                kill(p, SIGSTOP);
+            }
+        }
+        ((shared_memory_object*)shared_memory)->shared_buffer.switch_on();
+
+        double initial_percentage = ((shared_memory_object*)shared_memory)->shared_buffer.calculate_fill_percentage();
+        double expected_time = ((1 - initial_percentage) * ((shared_memory_object*)shared_memory)->shared_buffer.size()) * ((shared_memory_object*)shared_memory)->avg_insertion_time;
+        std::cout << "\nexpected time: " << expected_time << " because average is " << ((shared_memory_object*)shared_memory)->avg_insertion_time << std::endl;
+        
+        ((shared_memory_object*)shared_memory)->priority_boost = children[1];
+        std::cout << std::endl;
+
+
+        for(pid_t p : children) {
+            kill(p, SIGCONT);
+        }
+        
+        gettimeofday(&start, NULL);
+        
+        std::cout << "going to sleep" << std::endl;
+        ((shared_memory_object*)shared_memory)->shared_buffer.wait_until_full();
+        std::cout << "\nawake" << std::endl;
+        
+        gettimeofday(&end, NULL);
+
+        ((shared_memory_object*)shared_memory)->shared_buffer.switch_off();
+        pause_h::sleep(1, 0);
+
+        for(pid_t p : children) {
+            if(p != recover_pid) {
+                kill(p, SIGSTOP);
+            }
+        }
+        
+        double start_val = start.tv_sec + start.tv_usec / (double)1000000;
+        double end_val = end.tv_sec + end.tv_usec / (double)1000000;
+        
+        double elapsed_time = end_val - start_val;
+        
+        std::cout << "\nactually elapsed time " << elapsed_time << std::endl;
+
+        std::cout << "\n\n" << elapsed_time << " " << initial_percentage << "\n" << std::endl;
+
+        char command[50];
+        sprintf(command, "echo \"%f,%f\" >> ../%s.csv", elapsed_time, initial_percentage, mode.c_str());
+        system(command);
+    
+        std::cout << "\nemptying buffer and waiting for 10 seconds" << std::endl;
+
+        ((shared_memory_object*)shared_memory)->priority_boost = children[0];
+        std::cout << "ciao" << std::endl;
+        ((shared_memory_object*)shared_memory)->shared_buffer.switch_on();
+        std::cout << "ciao" << std::endl;
+        kill(children[0], SIGCONT);
+        std::cout << "ciao" << std::endl;
+        kill(children[children.size() - 1], SIGCONT);
+        std::cout << "ciao" << std::endl;
+
+        pause_h::sleep(10, 0);
+
+        ((shared_memory_object*)shared_memory)->priority_boost = 0;
+        for(pid_t p : children) {
+            kill(p, SIGCONT);
+
+            if(errno) {perror("");}
+        }
+    }
+
+    std::cout << "YO" << std::endl;
+    pause_h::sleep(seconds, nanoseconds);
     //Uccide tutti i processi figli
     for(pid_t p : children) {
         kill(p, SIGKILL);
     }
-
+    
+    /*for(double i : values) {
+        mse += (avg - i)*(avg - i);
+    }
+    
+    mse /= values.size();
+    mse = sqrt(mse);*/
+    
     munlockall();
 
     //Dealloca l'area di memoria condivisa
@@ -233,10 +368,10 @@ int main(int argc, char * argv[], char * env[]) {
 
     std::cout << std::endl << "Buffer has been empty for " << ((shared_memory_object*)shared_memory)->empty_ticks << " ticks" << std::endl
                 << "Average fill percentage: " << ((shared_memory_object*)shared_memory)->avg_percentage << "%" << std::endl;
+                
+    std::cout << std::endl << "Average fill time " << avg << std::endl
+                << "MSE " << mse << std::endl;
     
-    char command[1000];
-    sprintf(command, "echo \"%ld %f %d %d\" >> ../%s.log", ((shared_memory_object*)shared_memory)->empty_ticks, 
-            ((shared_memory_object*)shared_memory)->avg_percentage, seconds, nanoseconds, mode.c_str());
-    system(command);
+
     return 0;
 }

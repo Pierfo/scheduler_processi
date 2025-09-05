@@ -4,6 +4,7 @@
 #include "matrix.h"
 #include "actions.h"
 
+#define MAXIMUM_PRIORITY 90
 #define MATRIX_SIZE 7
 #define BUFFER_SIZE 1001
 
@@ -38,6 +39,8 @@ struct shared_memory_object {
     matrix_action_after_extraction<MATRIX_SIZE> action_after_extraction = matrix_action_after_extraction<MATRIX_SIZE>{};
     unsigned long long empty_ticks = 0;
     double avg_percentage = 0;
+    double avg_insertion_time = 0;
+    pid_t priority_boost = 0;
 };
 
 #endif
