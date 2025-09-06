@@ -31,14 +31,7 @@ int main(int argc, char * argv[]) {
         perror("");
     }
 
-    struct timeval start;
-    struct timeval end;
-    struct sched_param par;
-
-    unsigned long long nof_iterations;
-
     while(true) {
-        gettimeofday(&start, NULL);
         //std::cout << "start inserting" << std::endl;
         //Esegue la funzione definita in shared_memory_object.action_before_insertion
         auto obj = shared_memory->action_before_insertion();
@@ -47,19 +40,6 @@ int main(int argc, char * argv[]) {
         shared_buff->insert(obj);
         //std::cout << "done inserting" << std::endl;
         
-        gettimeofday(&end, NULL);
-
-        sched_getparam(0, &par);
-        
-        if(par.sched_priority == MAXIMUM_PRIORITY) {
-            double start_val = start.tv_sec + start.tv_usec / (double)1000000;
-            double end_val = end.tv_sec + end.tv_usec / (double)1000000;
-
-            double elapsed_time = end_val - start_val;
-            
-            shared_memory->avg_insertion_time = (shared_memory->avg_insertion_time * nof_iterations + elapsed_time) / ++nof_iterations;
-        }
-
-        sched_yield();
+        //sched_yield();
     }
 }

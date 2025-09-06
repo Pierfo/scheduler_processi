@@ -37,9 +37,6 @@ struct shared_memory_object {
     buffer<matrix<MATRIX_SIZE>, BUFFER_SIZE> shared_buffer = buffer<matrix<MATRIX_SIZE>, BUFFER_SIZE>{};
     matrix_action_before_insertion<MATRIX_SIZE> action_before_insertion = matrix_action_before_insertion<MATRIX_SIZE>{};
     matrix_action_after_extraction<MATRIX_SIZE> action_after_extraction = matrix_action_after_extraction<MATRIX_SIZE>{};
-    unsigned long long empty_ticks = 0;
-    double avg_percentage = 0;
-    double avg_insertion_time = 0;
     pid_t priority_boost = 0;
 };
 

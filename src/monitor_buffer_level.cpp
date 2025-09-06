@@ -127,9 +127,10 @@ int main(int argc, char* argv[]) {
         sched_setscheduler(0, SCHED_OTHER, &monitor_sched_param);
         
         char message[150];
-        sprintf(message, "Livello di riempimento: %10.6f%%          insert_into_buffer: %3d          remove_from_buffer: %3d\r", 
+        sprintf(message, "Livello di riempimento: %10.6f%%          insert_into_buffer: %3d          remove_from_buffer: %3d          %s\r", 
             percentage, (insert_sched_param.sched_priority ? insert_sched_param.sched_priority : -getpriority(PRIO_PROCESS, insert_proc)),
-            (remove_sched_param.sched_priority ? remove_sched_param.sched_priority : -getpriority(PRIO_PROCESS, remove_proc)));
+            (remove_sched_param.sched_priority ? remove_sched_param.sched_priority : -getpriority(PRIO_PROCESS, remove_proc)),
+            (shared_memory->priority_boost == insert_proc ? "PRIORITY BOOST" : ""));
 
         write(1, message, strlen(message));
 
