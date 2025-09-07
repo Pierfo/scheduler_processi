@@ -28,6 +28,7 @@ buffer<T, N>::buffer()
     pthread_cond_init(&no_change_happened, &cond_attr);
     pthread_cond_init(&buffer_not_full, &cond_attr);
     pthread_cond_init(&theres_still_someone, &cond_attr);
+    pthread_cond_init(&buffer_not_empty, &cond_attr);
 
     explicit_bzero(buf, N);
     process_accessing = 0;
@@ -101,6 +102,7 @@ T buffer<T, N>::extract() {
             return T{};
         }
 
+        pthread_cond_signal(&buffer_not_empty);
         pthread_cond_wait(&buffer_empty, &buffer_access);
     }
 
@@ -192,6 +194,30 @@ void buffer<T, N>::wait_until_full() {
 }
 
 template<typename T, int N>
+void buffer<T, N>::wait_until_empty() {
+    //std::cout << "\t\t\tstart waiting" << std::endl;
+    pthread_mutex_lock(&buffer_access);
+
+    process_accessing++;
+
+    while(!is_empty() || !is_on) {
+        if(!is_on) {
+            pthread_mutex_unlock(&buffer_access);
+
+            return;
+        }
+        
+        pthread_cond_wait(&buffer_not_empty, &buffer_access);
+    }
+
+    process_accessing--;
+    pthread_cond_signal(&theres_still_someone);
+
+    pthread_mutex_unlock(&buffer_access);
+    //std::cout << "\t\t\tdone waiting" << std::endl;
+}
+
+template<typename T, int N>
 void buffer<T, N>::empty_out() {
     //std::cout << "\t\t\t\tstart emptying" << std::endl;
     pthread_mutex_lock(&buffer_access);
@@ -257,6 +283,7 @@ buffer<T, N>::~buffer() {
     pthread_cond_destroy(&no_change_happened);
     pthread_cond_destroy(&buffer_not_full);
     pthread_cond_destroy(&theres_still_someone);
+    pthread_cond_destroy(&buffer_not_empty);
     pthread_condattr_destroy(&cond_attr);
 }
 

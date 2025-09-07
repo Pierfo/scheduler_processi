@@ -12,7 +12,7 @@
 
 //Compila il programma. Il file eseguibile si troverà nella directory "build_main"
 int main() {
-    std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "parasite", "recover", "main"};
+    std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "parasite", "main"};
 
     for(std::string name : v) {
         std::ofstream makefile {"CMakeLists.txt"};
@@ -39,7 +39,7 @@ int main() {
         script.close();
 
         system("chmod +x script.sh");
-        std::cout << std::endl << std::endl << "Compilazione di " << name << std::endl << std::endl;
+        std::cout << std::endl << std::endl << "Compiling " << name << std::endl << std::endl;
         system("./script.sh");
         system("rm script.sh");
     }
@@ -57,7 +57,7 @@ int main() {
         return 0;
     }
 
-    std::cout << std::endl << std::endl << "Creazione di file.txt" << std::endl;
+    std::cout << std::endl << std::endl << "Creating file.txt" << std::endl;
 
     char percentage[100];
     char * content = "AAAAAAAAAA";

@@ -17,6 +17,7 @@ class buffer {
     double calculate_fill_percentage(); //Calcola la percentuale di riempimento del buffer
     int size() {return (N - 1);}; //Restituisce la dimensione del buffer
     void wait_until_full();
+    void wait_until_empty();
     void empty_out();
     void switch_off();
     void switch_on();
@@ -34,6 +35,7 @@ class buffer {
     pthread_cond_t buffer_empty; //Variabile condition per quando il buffer è vuoto
     pthread_cond_t buffer_full; //Variabile condition per quando il buffer è pieno
     pthread_cond_t buffer_not_full;
+    pthread_cond_t buffer_not_empty;
     pthread_cond_t theres_still_someone;
     pthread_cond_t no_change_happened; //Variabile condition per quando la percentuale di riempimento non ha subito modifiche dall'ultima sua lettura
     pthread_condattr_t cond_attr; //Attributo che serve a definire le variabili condition

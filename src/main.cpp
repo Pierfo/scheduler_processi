@@ -16,7 +16,7 @@
 #include "shared_memory_object.h"
 #include "pause.h"
 
-#define INTERVAL 2
+#define INTERVAL 5
 #define WARMUP_TIME 10
 #define SWITCHOFF_TIME 1
 
@@ -30,7 +30,7 @@
 */
 int main(int argc, char * argv[], char * env[]) {   
     if(argc != 2) {
-        printf("Sintassi corretta: \"sudo %s n_misurazioni\"\n", argv[0]);
+        printf("Correct syntax: \"sudo %s n_measurement\"\n", argv[0]);
         return 0;
     }
 
@@ -41,17 +41,17 @@ int main(int argc, char * argv[], char * env[]) {
     }
 
     catch(std::invalid_argument e) {
-        printf("Errore: \"%s\" non è un numero\n", argv[1]);
+        printf("Error: \"%s\" is not a number\n", argv[1]);
         return 0;
     }
 
     catch(std::out_of_range e) {
-        printf("Errore: \"%s\" è un valore troppo grande\n", argv[1]);
+        printf("Error: \"%s\" is too large\n", argv[1]);
         return 0;
     }
 
     if(nof_iterations < 0) {
-        printf("Errore: \"%d\" non è un numero positivo\n", nof_iterations);
+        printf("Error: \"%d\" is not positive\n", nof_iterations);
         return 0;
     }
 
@@ -98,7 +98,7 @@ int main(int argc, char * argv[], char * env[]) {
     //Se errno assume valore EPERM allora il processo non ha avuto l'autorizzazione per eseguire l'ultima istruzione, 
     //dunque il programma non è stato eseguito in modalità sudo
     if(errno == EPERM) {
-        printf("Autorizzazione non concessa, prova con \"sudo %s %s\"\n", argv[0], argv[1]);
+        printf("Error: permission denied, try with \"sudo %s %s\"\n", argv[0], argv[1]);
         return 0;
     }
 
@@ -248,23 +248,26 @@ int main(int argc, char * argv[], char * env[]) {
 
     int measurement = 1;
 
-    pause_h::sleep(10, 0);
+    auto& buffer = ((shared_memory_object*)shared_memory)->shared_buffer;
+
+    pause_h::sleep(WARMUP_TIME, 0);
+
 
     while(nof_iterations) {
         std::cout << "\n\nSTART MEASUREMENT NUMBER " << measurement << "\n" << std::endl;
         //Sospende la propria esecuzione per il periodo di tempo definito dall'utente
         pause_h::sleep(INTERVAL, 0);
         
-        ((shared_memory_object*)shared_memory)->shared_buffer.switch_off();
+        buffer.switch_off();
         pause_h::sleep(SWITCHOFF_TIME, 0);
         for(pid_t p : children) {
             if(p != recover_pid) {
                 kill(p, SIGSTOP);
             }
         }
-        ((shared_memory_object*)shared_memory)->shared_buffer.switch_on();
+        buffer.switch_on();
 
-        double initial_percentage = ((shared_memory_object*)shared_memory)->shared_buffer.calculate_fill_percentage();
+        double initial_percentage = buffer.calculate_fill_percentage();
         
         ((shared_memory_object*)shared_memory)->priority_boost = children[1];
 
@@ -274,11 +277,11 @@ int main(int argc, char * argv[], char * env[]) {
         
         gettimeofday(&start, NULL);
         
-        ((shared_memory_object*)shared_memory)->shared_buffer.wait_until_full();
+        buffer.wait_until_full();
         
         gettimeofday(&end, NULL);
 
-        ((shared_memory_object*)shared_memory)->shared_buffer.switch_off();
+        buffer.switch_off();
         pause_h::sleep(SWITCHOFF_TIME, 0);
 
         for(pid_t p : children) {
@@ -291,27 +294,38 @@ int main(int argc, char * argv[], char * env[]) {
         double end_val = end.tv_sec + end.tv_usec / (double)1000000;
         
         double elapsed_time = end_val - start_val;
+        double speed = (1 - initial_percentage) * buffer.size() / elapsed_time;
         
         std::cout << "\nactually elapsed time " << elapsed_time << std::endl;
 
-        std::cout << "\n\n" << elapsed_time << " " << initial_percentage << "\n" << std::endl;
+        std::cout << "\n\n" << elapsed_time << " " << initial_percentage << " " << speed << "\n" << std::endl;
 
-        char command[50];
-        sprintf(command, "echo \"%f,%f\" >> ../%s.csv", elapsed_time, initial_percentage, mode.c_str());
+        char command[75];
+        sprintf(command, "echo \"%f,%f,,%f\" >> ../%s.csv", elapsed_time, initial_percentage, speed, mode.c_str());
         system(command);
     
-        std::cout << "\nemptying buffer and waiting for 10 seconds" << std::endl;
+        std::cout << "\nemptying buffer" << std::endl;
 
         ((shared_memory_object*)shared_memory)->priority_boost = children[0];
-        ((shared_memory_object*)shared_memory)->shared_buffer.switch_on();
+        buffer.switch_on();
         
         kill(children[0], SIGCONT);
         kill(children[children.size() - 1], SIGCONT);
 
-        pause_h::sleep(WARMUP_TIME, 0);
+        buffer.wait_until_empty();
+        
+        pause_h::sleep(1, 0);
+
+        kill(children[0], SIGSTOP);
+        kill(children[children.size() - 1], SIGSTOP);
 
         nof_iterations--;
         measurement++;
+
+        if(nof_iterations) {
+            std::cout << "\n" << WARMUP_TIME << " seconds cooldown" << std::endl;
+            pause_h::sleep(WARMUP_TIME, 0);
+        }
 
         ((shared_memory_object*)shared_memory)->priority_boost = 0;
         for(pid_t p : children) {
