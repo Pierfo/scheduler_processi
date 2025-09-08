@@ -193,11 +193,13 @@ int main(int argc, char * argv[], char * env[]) {
         pid = fork();
         
         if(pid == 0) {        
-            char * arguments[2];
+            char * arguments[3];
             arguments[0] = arguments_buffer + arguments_index;
             strcpy(arguments[0], "./parasite");
             arguments_index += strlen("./parasite") + 1;
-            arguments[1] = (char*)NULL;
+            arguments[1] = arguments_buffer + arguments_index;
+            arguments_index += sprintf(arguments_buffer + arguments_index, "%d", (i % 2)) + 1;
+            arguments[2] = (char*)NULL;
             
             execve("../build_parasite/parasite", (char* const*)arguments, env);
 

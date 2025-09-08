@@ -10,6 +10,49 @@
 
 #define FILE_SIZE 100000000
 
+void create_file(const char * name) {
+    errno = 0;
+    int fd = open(name, O_CREAT | O_EXCL | O_RDWR, 0666);
+
+    if(errno == EEXIST) {
+        close(fd);
+        return;
+    }
+
+    if(fd == -1) {
+        perror("");
+        close(fd);
+        return;
+    }
+
+    std::cout << std::endl << std::endl << "Creating " << name << std::endl;
+
+    if(!strcmp(name, "file.txt")) {
+        char percentage[100];
+        char * content = "AAAAAAAAAA";
+        int content_size = strlen(content);
+
+        for(long long i = 0; i < FILE_SIZE / content_size; i++) {
+            double value = (i + 1) / ((double)FILE_SIZE / content_size);
+            sprintf(percentage, "%f%%\r", (value * 100));
+            write(1, percentage, strlen(percentage));
+            write(fd, content, content_size);
+            
+            if(errno) perror("");
+        }
+    }
+
+    else {
+        char header[31] = "TIME,INITIAL PERCENTAGE,,SPEED";
+        write(fd, header, strlen(header));
+
+        if(errno) perror("");
+    }
+
+    std::cout << std::endl << std::endl;
+    close(fd);
+}
+
 //Compila il programma. Il file eseguibile si troverà nella directory "build_main"
 int main() {
     std::vector<std::string> v = {"insert_into_buffer", "remove_from_buffer", "monitor_buffer_level", "parasite", "main"};
@@ -46,34 +89,9 @@ int main() {
 
     system("rm CMakeLists.txt");
 
-    int fd = open("file.txt", O_CREAT | O_EXCL | O_RDWR, 0666);
-
-    if(errno == EEXIST) {
-        return 0;
-    }
-
-    if(fd == -1) {
-        perror("");
-        return 0;
-    }
-
-    std::cout << std::endl << std::endl << "Creating file.txt" << std::endl;
-
-    char percentage[100];
-    char * content = "AAAAAAAAAA";
-    int content_size = strlen(content);
-
-    for(long long i = 0; i < FILE_SIZE / content_size; i++) {
-        double value = (i + 1) / ((double)FILE_SIZE / content_size);
-        sprintf(percentage, "%f%%\r", (value * 100));
-        write(1, percentage, strlen(percentage));
-        write(fd, content, content_size);
-        
-        if(errno) perror("");
-    }
-
-    std::cout << std::endl << std::endl;
-    close(fd);
+    create_file("file.txt");
+    create_file("realtime.csv");
+    create_file("generic.csv");
 
     return 0;
 }

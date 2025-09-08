@@ -18,7 +18,7 @@ int main(int argc, char * argv[]) {
 
         cpu_set_t set;
         CPU_ZERO(&set);
-        CPU_SET((getpid() % 2), &set);
+        CPU_SET(strtol(argv[1], NULL, 10), &set);
         sched_setaffinity(getpid(), sizeof(set), &set);
 
         int fd = open("../file.txt", O_RDWR | O_NONBLOCK);
