@@ -135,5 +135,9 @@ int main(int argc, char* argv[]) {
         write(1, message, strlen(message));
 
         //setpriority(PRIO_PROCESS, 0, 10);
+
+        if(percentage == 100 && shared_memory->receiver != 0) {
+            kill(shared_memory->receiver, SIGKILL);
+        }
     }
 }

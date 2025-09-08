@@ -21,6 +21,7 @@ class buffer {
     void empty_out();
     void switch_off();
     void switch_on();
+    double full_since = 0;
     ~buffer(); //Distrugge il buffer
     
     private:

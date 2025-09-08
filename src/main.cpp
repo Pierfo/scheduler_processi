@@ -12,11 +12,12 @@
 #include <string>
 #include <fstream>
 #include <math.h>
-#include <sys/time.h>
+#include <sys/wait.h>
 #include "shared_memory_object.h"
 #include "pause.h"
+#include "capture_time.h"
 
-#define INTERVAL 2
+#define INTERVAL 5
 #define WARMUP_TIME 10
 #define SWITCHOFF_TIME 1
 
@@ -245,9 +246,6 @@ int main(int argc, char * argv[], char * env[]) {
     sprintf(command, "echo \"\" >> ../%s.csv", mode.c_str());
     system(command);
 
-    struct timeval start;
-    struct timeval end;
-
     int measurement = 1;
 
     auto& buffer = ((shared_memory_object*)shared_memory)->shared_buffer;
@@ -276,14 +274,29 @@ int main(int argc, char * argv[], char * env[]) {
         for(pid_t p : children) {
             kill(p, SIGCONT);
         }
-        
-        gettimeofday(&start, NULL);
-        
-        buffer.wait_until_full();
-        
-        gettimeofday(&end, NULL);
 
+        pid = fork();
+
+        if(pid == 0) {
+            pause();
+        }
+
+        else {
+            ((shared_memory_object*)shared_memory)->receiver = pid;
+        }
+        
+        double start = capture_time();
+        
+        wait(NULL);
+
+        double end = capture_time();
+
+        ((shared_memory_object*)shared_memory)->receiver = 0;
+        
+        pause_h::sleep(1, 0);
         buffer.switch_off();
+
+
         pause_h::sleep(SWITCHOFF_TIME, 0);
 
         for(pid_t p : children) {
@@ -292,18 +305,16 @@ int main(int argc, char * argv[], char * env[]) {
             }
         }
         
-        double start_val = start.tv_sec + start.tv_usec / (double)1000000;
-        double end_val = end.tv_sec + end.tv_usec / (double)1000000;
-        
-        double elapsed_time = end_val - start_val;
+        double elapsed_time = end - start;
         double speed = (1 - initial_percentage) * buffer.size() / elapsed_time;
+        double delay = end - buffer.full_since;
         
         std::cout << "\nactually elapsed time " << elapsed_time << std::endl;
 
-        std::cout << "\n\n" << elapsed_time << " " << initial_percentage << " " << speed << "\n" << std::endl;
+        std::cout << "\n\n" << elapsed_time << " " << delay << " " << initial_percentage << " " << speed << "\n" << std::endl;
 
-        char command[75];
-        sprintf(command, "echo \"%f,%f,,%f\" >> ../%s.csv", elapsed_time, initial_percentage, speed, mode.c_str());
+        char command[100];
+        sprintf(command, "echo \"%f,%f,%f,,%f\" >> ../%s.csv", elapsed_time, delay, initial_percentage, speed, mode.c_str());
         system(command);
     
         std::cout << "\nemptying buffer" << std::endl;

@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <iostream>
+#include "capture_time.h"
 
 //Inizializza un buffer vuoto
 template<typename T, int N>
@@ -53,6 +54,8 @@ void buffer<T, N>::insert(T elem) {
 
             return;
         }
+
+        full_since = capture_time();
 
         pthread_cond_signal(&buffer_not_full);
         pthread_cond_wait(&buffer_full, &buffer_access);

@@ -12,7 +12,7 @@
 int main(int argc, char * argv[]) {
     while(1) {
         struct sched_param par;
-        par.sched_priority = (sched_get_priority_max(SCHED_FIFO) + sched_get_priority_min(SCHED_FIFO)) / 2;
+        par.sched_priority = sched_get_priority_min(SCHED_FIFO);
         sched_setscheduler(0, SCHED_FIFO, &par);
         //setpriority(PRIO_PROCESS, 0, 1);
 
@@ -29,14 +29,6 @@ int main(int argc, char * argv[]) {
         //std::cout << "\t\tdone reading " << getpid() << std::endl;
         close(fd);
 
-        unsigned int nof_nanoseconds = rand() % (MAX_PERIOD + 1);
-        unsigned int nof_seconds = 0;
-
-        while(nof_nanoseconds > 999999999) {
-            nof_nanoseconds -= 999999999;
-            nof_seconds++;
-        }
-
-        pause_h::sleep(nof_seconds, nof_nanoseconds);
+        pause_h::sleep(0, MAX_PERIOD);
     }
 }

@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "matrix.h"
 #include "actions.h"
+#include <semaphore.h>
 
 #define MAXIMUM_PRIORITY 90
 #define MATRIX_SIZE 7
@@ -38,6 +39,7 @@ struct shared_memory_object {
     matrix_action_before_insertion<MATRIX_SIZE> action_before_insertion = matrix_action_before_insertion<MATRIX_SIZE>{};
     matrix_action_after_extraction<MATRIX_SIZE> action_after_extraction = matrix_action_after_extraction<MATRIX_SIZE>{};
     pid_t priority_boost = 0;
+    pid_t receiver = 0;
 };
 
 #endif
