@@ -40,6 +40,6 @@ int main(int argc, char * argv[]) {
         shared_buff->insert(obj);
         //std::cout << "done inserting" << std::endl;
         
-        //sched_yield();
+        sched_yield();
     }
 }

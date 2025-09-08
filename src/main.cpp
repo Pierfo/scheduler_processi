@@ -16,7 +16,7 @@
 #include "shared_memory_object.h"
 #include "pause.h"
 
-#define INTERVAL 5
+#define INTERVAL 2
 #define WARMUP_TIME 10
 #define SWITCHOFF_TIME 1
 
@@ -318,7 +318,7 @@ int main(int argc, char * argv[], char * env[]) {
         
         pause_h::sleep(1, 0);
 
-        kill(children[0], SIGSTOP);
+        //kill(children[0], SIGSTOP);
         kill(children[children.size() - 1], SIGSTOP);
 
         nof_iterations--;

@@ -12,7 +12,7 @@
 int main(int argc, char * argv[]) {
     while(1) {
         struct sched_param par;
-        par.sched_priority = sched_get_priority_min(SCHED_FIFO);
+        par.sched_priority = (sched_get_priority_max(SCHED_FIFO) + sched_get_priority_min(SCHED_FIFO)) / 2;
         sched_setscheduler(0, SCHED_FIFO, &par);
         //setpriority(PRIO_PROCESS, 0, 1);
 

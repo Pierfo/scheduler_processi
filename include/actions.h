@@ -40,8 +40,12 @@ class matrix_action_after_extraction {
     public:
     matrix_action_after_extraction() {}; //Costruttore di default
     void operator() (matrix<N> mat) {
-        if(mat.determinant()) {
+        try {
             mat.invert();
+        }
+
+        catch(std::logic_error e) {
+            return;
         }
     }; //Overriding del'operatore (): costruisce la matrice inversa
 };
