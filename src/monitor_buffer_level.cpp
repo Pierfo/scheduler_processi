@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <sys/resource.h>
 #include <signal.h>
+#include "capture_time.h"
 #include "shared_memory_object.h"
 
 
@@ -82,9 +83,11 @@ int main(int argc, char* argv[]) {
     std::string end_part {};
 //    unsigned long long nof_iterations = 0;
     
+    double start = capture_time();
+
     while(true) {
         //Conferisce a sé stesso la priorità massima con politica SCHED_FIFO
-        monitor_sched_param.sched_priority = 90;
+        monitor_sched_param.sched_priority = 89;
         sched_setscheduler(0, SCHED_FIFO, &monitor_sched_param);
 
         //Ottiene la percentuale di riempimento del buffer. Per come questa funzione è stata costruita, si ha che il
@@ -133,6 +136,8 @@ int main(int argc, char* argv[]) {
             (shared_memory->priority_boost == insert_proc ? "PRIORITY BOOST" : ""));
 
         write(1, message, strlen(message));
+
+        start = capture_time();
 
         //setpriority(PRIO_PROCESS, 0, 10);
 

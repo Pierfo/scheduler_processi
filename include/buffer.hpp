@@ -55,8 +55,10 @@ void buffer<T, N>::insert(T elem) {
             return;
         }
 
-        full_since = capture_time();
-
+        if(!full_since) {
+            full_since = capture_time();
+        }
+        
         pthread_cond_signal(&buffer_not_full);
         pthread_cond_wait(&buffer_full, &buffer_access);
     }

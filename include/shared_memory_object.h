@@ -7,7 +7,7 @@
 
 #define MAXIMUM_PRIORITY 90
 #define MATRIX_SIZE 7
-#define BUFFER_SIZE 1001
+#define BUFFER_SIZE 1127
 
 /*
     struct contenente gli elementi che si vuole condividere con i vari processi. Esso è dotato dei seguenti campi:

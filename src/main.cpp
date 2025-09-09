@@ -294,11 +294,11 @@ int main(int argc, char * argv[], char * env[]) {
         ((shared_memory_object*)shared_memory)->receiver = 0;
         
         pause_h::sleep(1, 0);
+        
         buffer.switch_off();
-
-
+        
         pause_h::sleep(SWITCHOFF_TIME, 0);
-
+        
         for(pid_t p : children) {
             if(p != recover_pid) {
                 kill(p, SIGSTOP);
@@ -309,6 +309,8 @@ int main(int argc, char * argv[], char * env[]) {
         double speed = (1 - initial_percentage) * buffer.size() / elapsed_time;
         double delay = end - buffer.full_since;
         
+        buffer.full_since = 0;
+
         std::cout << "\nactually elapsed time " << elapsed_time << std::endl;
 
         std::cout << "\n\n" << elapsed_time << " " << delay << " " << initial_percentage << " " << speed << "\n" << std::endl;
