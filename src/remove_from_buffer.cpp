@@ -11,7 +11,7 @@ int main(int argc, char * argv[]) {
 
     cpu_set_t set;
     CPU_ZERO(&set);
-    CPU_SET(1, &set);
+    CPU_SET(0, &set);
     sched_setaffinity(getpid(), sizeof(set), &set);
 
     //Apre un collegamento con la memoria condivisa costruita dal processo main
