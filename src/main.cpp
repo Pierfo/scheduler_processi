@@ -13,6 +13,7 @@
 #include <fstream>
 #include <math.h>
 #include <sys/wait.h>
+#include <sys/resource.h>
 #include "shared_memory_object.h"
 #include "pause.h"
 #include "capture_time.h"
@@ -20,6 +21,37 @@
 #define INTERVAL 5
 #define WARMUP_TIME 10
 #define SWITCHOFF_TIME 1
+
+//Aumenta la priorità del processo a, facendolo passare alla politica SCHED_RR, e diminuisce quella del processo b,
+//facendolo passare alla politica di default SCHED_OTHER.
+void boost_priority(pid_t a, struct sched_param& a_sched_param, pid_t b, struct sched_param& b_sched_param, int prio) {
+    if(prio < a_sched_param.sched_priority) return;
+
+    a_sched_param.sched_priority = prio;
+    b_sched_param.sched_priority = 0;
+
+    sched_setscheduler(a, SCHED_RR, &a_sched_param);
+    sched_setscheduler(b, SCHED_OTHER, &b_sched_param);
+
+    //Definisce il nice value per b
+    setpriority(PRIO_PROCESS, b, (int)floor(prio * 19 / MAXIMUM_PRIORITY));
+    return;
+}
+
+//Se la priorità del processo a è maggiore del valore minimo, allora diminuisce questa di un'unità e riduce il nice value
+//del processo b
+void neutral_priority(pid_t a, struct sched_param& a_sched_param, pid_t b, struct sched_param& b_sched_param) {
+    if(a_sched_param.sched_priority == 0 && b_sched_param.sched_priority == 0) return;
+    
+    a_sched_param.sched_priority = 0;
+    b_sched_param.sched_priority = 0;
+    sched_setscheduler(a, SCHED_OTHER, &a_sched_param);
+    sched_setscheduler(b, SCHED_OTHER, &b_sched_param);
+    setpriority(PRIO_PROCESS, a, 0);
+    setpriority(PRIO_PROCESS, b, 0);
+    
+    return;
+}
 
 /*
     Avvia l'esecuzione dei processi di inserimento ed estrazione dei dati e di monitoraggio del livello del buffer, 
@@ -147,6 +179,8 @@ int main(int argc, char * argv[], char * env[]) {
         children.push_back(pid);
     }
 
+    pid_t remove_pid = pid;
+
     pid = fork();
     
     if(pid == 0) {        
@@ -166,6 +200,8 @@ int main(int argc, char * argv[], char * env[]) {
     else {
         children.push_back(pid);
     }
+
+    pid_t insert_pid = pid;
 
     //pid = fork();
     pid_t recover_pid = 0;
@@ -190,7 +226,7 @@ int main(int argc, char * argv[], char * env[]) {
         recover_pid = pid;
     }*/
 
-    for(int i = 0; i < 10; i++) {
+    for(int i = 0; i < 20; i++) {
         pid = fork();
         
         if(pid == 0) {        
@@ -252,6 +288,9 @@ int main(int argc, char * argv[], char * env[]) {
 
     pause_h::sleep(WARMUP_TIME, 0);
 
+    struct sched_param insert_param;
+    struct sched_param remove_param;
+
 
     while(nof_iterations) {
         std::cout << "\n\nSTART MEASUREMENT NUMBER " << measurement << "\n" << std::endl;
@@ -269,7 +308,7 @@ int main(int argc, char * argv[], char * env[]) {
 
         double initial_percentage = buffer.calculate_fill_percentage();
         
-        ((shared_memory_object*)shared_memory)->priority_boost = children[1];
+        boost_priority(insert_pid, insert_param, remove_pid, remove_param, MAXIMUM_PRIORITY);
 
         for(pid_t p : children) {
             kill(p, SIGCONT);
@@ -321,7 +360,7 @@ int main(int argc, char * argv[], char * env[]) {
     
         std::cout << "\nemptying buffer" << std::endl;
 
-        ((shared_memory_object*)shared_memory)->priority_boost = children[0];
+        boost_priority(remove_pid, remove_param, insert_pid, insert_param, MAXIMUM_PRIORITY);
         buffer.switch_on();
         
         kill(children[0], SIGCONT);
@@ -342,7 +381,7 @@ int main(int argc, char * argv[], char * env[]) {
             pause_h::sleep(WARMUP_TIME, 0);
         }
 
-        ((shared_memory_object*)shared_memory)->priority_boost = 0;
+        neutral_priority(insert_pid, insert_param, remove_pid, remove_param);
         for(pid_t p : children) {
             kill(p, SIGCONT);
 

@@ -7,7 +7,7 @@
 
 #define MAXIMUM_PRIORITY 90
 #define MATRIX_SIZE 7
-#define BUFFER_SIZE 1127
+#define BUFFER_SIZE 1101
 
 /*
     struct contenente gli elementi che si vuole condividere con i vari processi. Esso è dotato dei seguenti campi:
@@ -38,7 +38,6 @@ struct shared_memory_object {
     buffer<matrix<MATRIX_SIZE>, BUFFER_SIZE> shared_buffer = buffer<matrix<MATRIX_SIZE>, BUFFER_SIZE>{};
     matrix_action_before_insertion<MATRIX_SIZE> action_before_insertion = matrix_action_before_insertion<MATRIX_SIZE>{};
     matrix_action_after_extraction<MATRIX_SIZE> action_after_extraction = matrix_action_after_extraction<MATRIX_SIZE>{};
-    pid_t priority_boost = 0;
     pid_t receiver = 0;
 };
 
